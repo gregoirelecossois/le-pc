@@ -169,7 +169,7 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     approach: [1, 0, 0],
     approachDist: 10,
     explode: [25, 21, -7],
-    labelOffset: [2.4, 8.2, 0],
+    labelOffset: [2.4, 9.6, -4.5],
     snapRadius: 3.4,
   },
 
@@ -178,7 +178,7 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     approach: [1, 0, 0],
     approachDist: 10,
     explode: [25, 21, -1],
-    labelOffset: [2.4, 8.2, 0],
+    labelOffset: [2.4, 5.6, 4.5],
     snapRadius: 3.4,
   },
 
@@ -197,7 +197,7 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     approach: [0, 1, 0],
     approachDist: 13,
     explode: [23, -17, -3],
-    labelOffset: [0, -3.6, -12],
+    labelOffset: [0, -5.0, -13],
     snapRadius: 7,
   },
 
@@ -206,7 +206,7 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     approach: [1, 0, 0],
     approachDist: 12,
     explode: [19, -5, -19],
-    labelOffset: [0, 2.6, -8],
+    labelOffset: [0, 3.4, -9],
     snapRadius: 7,
   },
 
