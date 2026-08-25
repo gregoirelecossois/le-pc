@@ -1,0 +1,536 @@
+/* ================================================================
+   Le PC — styles des exercices
+   ================================================================ */
+
+/* ---------------- Barre d'exercice ---------------- */
+
+.exbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, rgba(10, 13, 19, 0.95), rgba(10, 13, 19, 0.7));
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+  flex-wrap: wrap;
+}
+.exbar-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+  margin-right: 6px;
+}
+.exbar-icon {
+  font-size: 20px;
+}
+.exbar-title > span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.exbar-title b {
+  font-size: 15px;
+}
+.exbar-title em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+.exbar-progress {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 170px;
+  flex: 0 1 240px;
+}
+.exbar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.exbar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.45s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.exbar-count {
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+
+/* ---------------- Panneau d'outils (gauche) ---------------- */
+
+.tools {
+  position: absolute;
+  left: 16px;
+  top: 74px;
+  width: 258px;
+  max-height: calc(100% - 100px);
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.tools-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  font-weight: 600;
+}
+.tools-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.tools-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tools-views .btn {
+  font-size: 11.5px;
+  padding: 5px 9px;
+}
+.tools-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.tools-check input {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+.tools-sep {
+  height: 1px;
+  background: var(--line);
+}
+.tools-legend {
+  font-size: 12px;
+  color: var(--fg-faint);
+}
+.tools-legend b {
+  color: var(--accent);
+}
+
+.chiplist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+.chip {
+  --c: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.chip:hover {
+  border-color: var(--c);
+  color: var(--fg);
+}
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  flex: none;
+}
+.chip.got {
+  color: var(--fg);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.chip.got .chip-dot {
+  background: var(--c);
+}
+.chip.sel {
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+  border-color: var(--c);
+  color: #fff;
+}
+
+/* ---------------- Fiche composant ---------------- */
+
+.infocard {
+  --c: var(--accent);
+  position: absolute;
+  right: 16px;
+  top: 74px;
+  width: 366px;
+  max-height: calc(100% - 100px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.infocard::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: var(--c);
+}
+.infocard-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.infocard-title {
+  margin: 8px 0 0;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.infocard-acronym {
+  font-size: 12px;
+  color: var(--fg-faint);
+}
+.infocard-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--fg-faint);
+  font-size: 26px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.infocard-close:hover {
+  color: var(--fg);
+}
+.infocard-body {
+  padding: 15px 18px 18px;
+  overflow-y: auto;
+}
+.infocard-role {
+  margin: 0 0 14px;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.infocard-analogy {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 34%, transparent);
+  margin-bottom: 14px;
+}
+.infocard-analogy p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-style: italic;
+}
+.infocard-details {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+}
+.infocard-details li {
+  margin-bottom: 6px;
+}
+.infocard-block {
+  padding: 11px 13px;
+  border-radius: 11px;
+  margin-bottom: 9px;
+  border: 1px solid var(--line);
+}
+.infocard-block b {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+.infocard-block p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.infocard-hands {
+  background: rgba(255, 138, 61, 0.09);
+  border-color: rgba(255, 138, 61, 0.3);
+}
+.infocard-hands b {
+  color: var(--warn);
+}
+.infocard-fun {
+  background: rgba(167, 139, 250, 0.09);
+  border-color: rgba(167, 139, 250, 0.28);
+}
+.infocard-fun b {
+  color: var(--violet);
+}
+.infocard-foot {
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------------- Retour d'information ---------------- */
+
+.feedback {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 620px;
+  padding: 14px 44px 14px 17px;
+  border-radius: 14px;
+  background: rgba(14, 18, 25, 0.97);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+  z-index: 55;
+}
+.feedback-icon {
+  font-size: 21px;
+  line-height: 1.2;
+}
+.feedback b {
+  font-size: 14.5px;
+}
+.feedback p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.feedback-ok {
+  border-color: var(--ok);
+}
+.feedback-bad {
+  border-color: var(--bad);
+}
+.feedback-info {
+  border-color: var(--accent);
+}
+.feedback-close {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  background: none;
+  border: none;
+  color: var(--fg-faint);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.hintbar {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: rgba(14, 18, 25, 0.9);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+
+/* ---------------- Consigne et écran de fin ---------------- */
+
+.intro-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: 16px;
+}
+.intro-icon {
+  font-size: 38px;
+}
+.intro-n {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.intro-title {
+  margin: 3px 0 0;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.intro-goal {
+  font-size: 15.5px;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+.intro-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--fg-dim);
+  margin-bottom: 16px;
+}
+.intro-tips b {
+  color: var(--fg);
+  margin-right: 6px;
+}
+.intro-obj {
+  padding: 12px 15px;
+  border-radius: 11px;
+  background: rgba(77, 208, 225, 0.09);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.intro-obj b {
+  display: block;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.end-head {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.end-title {
+  margin: 12px 0 0;
+  font-size: 23px;
+  font-weight: 800;
+}
+.end-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.end-stats > div {
+  text-align: center;
+  padding: 13px 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+}
+.end-stats b {
+  display: block;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.end-stats span {
+  font-size: 11.5px;
+  color: var(--fg-faint);
+}
+.end-learn {
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: rgba(102, 209, 122, 0.09);
+  border: 1px solid rgba(102, 209, 122, 0.28);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.end-learn b {
+  display: block;
+  color: var(--ok);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* ---------------- Réglages ---------------- */
+
+.settings-fab {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(14, 18, 25, 0.88);
+  color: var(--fg-dim);
+  font-size: 18px;
+  z-index: 70;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.settings-fab:hover {
+  transform: rotate(35deg);
+  color: var(--fg);
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.set-row > div:first-child {
+  flex: 1;
+}
+.set-row b {
+  font-size: 14.5px;
+}
+.set-row p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.switch {
+  width: 46px;
+  height: 26px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  background: rgba(0, 0, 0, 0.4);
+  position: relative;
+  flex: none;
+}
+.switch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+  transition: all 0.18s ease;
+}
+.switch.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch.on span {
+  left: 22px;
+  background: #04222a;
+}

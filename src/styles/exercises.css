@@ -1,0 +1,454 @@
+/* ================================================================
+   Le PC — panneaux propres à chaque exercice
+   ================================================================ */
+
+.tools-thin {
+  width: 218px;
+}
+
+/* ---------------- Quiz (chapitre 2) ---------------- */
+
+.quiz {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 40px));
+  text-align: center;
+}
+.quiz-q {
+  font-size: 15px;
+  color: var(--fg-dim);
+  margin-bottom: 13px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+}
+.quiz-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.quiz-btn {
+  padding: 15px 18px;
+  border-radius: 13px;
+  border: 1px solid var(--line-strong);
+  background: rgba(18, 23, 31, 0.94);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+.quiz-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.quiz-btn.good {
+  border-color: var(--ok);
+  background: rgba(102, 209, 122, 0.2);
+  color: #dff7e4;
+}
+.quiz-btn.bad {
+  border-color: var(--bad);
+  background: rgba(255, 107, 107, 0.18);
+}
+.quiz-btn.dim {
+  opacity: 0.4;
+}
+.quiz-next {
+  margin-top: 12px;
+}
+
+/* ---------------- Consigne « clique sur… » (chapitre 3) ---------------- */
+
+.prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  padding: 16px 30px;
+  text-align: center;
+  min-width: 300px;
+}
+.prompt-label {
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.prompt-name {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 4px 0 3px;
+}
+.prompt-sub {
+  font-size: 12px;
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- Association (chapitre 4) ---------------- */
+
+.match {
+  position: absolute;
+  inset: 74px 20px 20px;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 760px);
+  gap: 16px;
+  pointer-events: none;
+}
+/* voile sombre : le fond 3D reste visible mais ne gêne plus la lecture */
+.match::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(8, 10, 15, 0.92) 0%, rgba(8, 10, 15, 0.86) 62%, rgba(8, 10, 15, 0.35) 100%);
+  z-index: -1;
+}
+.match-col {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  overflow-y: auto;
+  pointer-events: auto;
+  padding: 2px;
+}
+.match-h {
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  margin: 0 0 3px;
+}
+.match-item {
+  --c: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: rgba(16, 21, 28, 0.93);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  line-height: 1.4;
+  transition: all 0.14s ease;
+}
+.match-item:hover:not(:disabled) {
+  border-color: var(--c);
+  transform: translateX(3px);
+}
+.match-item.name {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+.match-item.name em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+.match-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+  flex: none;
+}
+.match-item.picked {
+  border-color: var(--accent-2);
+  background: rgba(255, 209, 102, 0.15);
+  box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.28);
+}
+.match-item.done {
+  opacity: 0.42;
+  border-color: var(--ok);
+  background: rgba(102, 209, 122, 0.1);
+}
+.match-item.wrong {
+  border-color: var(--bad);
+  background: rgba(255, 107, 107, 0.16);
+}
+
+/* ---------------- Établi (chapitres 5 et 9) ---------------- */
+
+.tray {
+  position: absolute;
+  left: 16px;
+  top: 74px;
+  width: 244px;
+  max-height: calc(100% - 100px);
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 10px;
+}
+.tray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.tray-head .faint {
+  font-size: 11.5px;
+}
+.tray-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+.traycard {
+  --c: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: grab;
+  transition: all 0.13s ease;
+  user-select: none;
+  touch-action: none;
+}
+.traycard:hover:not(.lock) {
+  border-color: var(--c);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(3px);
+}
+.traycard-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 3px;
+  background: var(--c);
+  flex: none;
+}
+.traycard-name {
+  flex: 1;
+}
+.traycard em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--fg-faint);
+}
+.traycard.lock {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.traycard.grabbed {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+.traycard-lock {
+  font-size: 11px;
+}
+.tray-foot {
+  display: flex;
+  gap: 6px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+.tray-foot .btn {
+  font-size: 11.5px;
+  padding: 5px 9px;
+}
+
+.dragbar {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 11px 22px;
+  border-radius: 999px;
+  background: rgba(255, 209, 102, 0.16);
+  border: 1px solid var(--accent-2);
+  color: var(--accent-2);
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.okflash {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 11px 22px;
+  border-radius: 999px;
+  background: rgba(102, 209, 122, 0.16);
+  border: 1px solid var(--ok);
+  color: #d6f5dd;
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ---------------- Câblage (chapitre 6) ---------------- */
+
+.cablepanel {
+  position: absolute;
+  left: 16px;
+  top: 74px;
+  width: 292px;
+  padding: 16px;
+}
+.cablepanel-head {
+  margin-bottom: 10px;
+}
+.cablepanel-name {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.cablepanel-role {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.cablepanel-from {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.cablepanel-from span {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.cablepanel-from b {
+  font-size: 14px;
+}
+.cablepanel-ask {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.cablepanel-done {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.dotstep {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+.dotstep.on {
+  background: var(--ok);
+}
+.dotstep.cur {
+  background: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.22);
+}
+
+/* ---------------- Périphériques (chapitre 7) ---------------- */
+
+.peri {
+  position: absolute;
+  left: 16px;
+  top: 74px;
+  width: 320px;
+  padding: 16px;
+}
+.peri-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 13px;
+}
+.peri-icon {
+  font-size: 34px;
+  line-height: 1;
+}
+.peri-name {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+}
+.peri-role {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-dim);
+}
+.peri-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(77, 208, 225, 0.1);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  margin-bottom: 12px;
+}
+.peri-ask b {
+  font-size: 14.5px;
+  color: var(--accent);
+}
+.peri-ask .faint {
+  font-size: 12px;
+}
+.peri-classify > b {
+  display: block;
+  font-size: 14.5px;
+  margin-bottom: 9px;
+}
+.peri-kinds {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.peri-kind {
+  --k: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.14s ease;
+}
+.peri-kind:hover {
+  border-color: var(--k);
+  background: color-mix(in srgb, var(--k) 14%, transparent);
+}
+.peri-kind b {
+  font-size: 14px;
+  color: var(--k);
+}
+.peri-kind span {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  line-height: 1.35;
+}
+.peri-progress {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 11px;
+}

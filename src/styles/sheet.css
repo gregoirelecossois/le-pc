@@ -1,0 +1,253 @@
+/* ================================================================
+   Fiche de révision (écran + impression)
+   ================================================================ */
+
+.sheet-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0b0e14;
+}
+.sheet-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 13, 19, 0.95);
+}
+
+.sheet {
+  flex: 1;
+  overflow-y: auto;
+  padding: 34px clamp(18px, 6vw, 70px) 60px;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sheet-head {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 3px solid var(--accent);
+  margin-bottom: 26px;
+}
+.sheet-head h1 {
+  margin: 0;
+  font-size: clamp(24px, 3.2vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.sheet-sub {
+  margin: 6px 0 0;
+  color: var(--fg-dim);
+  font-size: 14.5px;
+}
+.sheet-id {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--fg-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.sheet section {
+  margin-bottom: 30px;
+  break-inside: avoid;
+}
+.sheet h2 {
+  font-size: 18.5px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+}
+.sheet h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--accent);
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sheet-table th {
+  text-align: left;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.sheet-table td {
+  padding: 9px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.sheet-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.022);
+}
+.sheet-cat {
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.sheet-small {
+  font-size: 12.2px;
+  color: var(--fg-dim);
+}
+.sheet-acr {
+  color: var(--fg-faint);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.sheet-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+.sheet-ol,
+.sheet-ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13.2px;
+  line-height: 1.7;
+}
+.sheet-ul.sheet-tight {
+  line-height: 1.55;
+  list-style: none;
+  padding-left: 0;
+}
+.sheet-note {
+  margin: 12px 0 0;
+  padding: 10px 13px;
+  border-left: 3px solid var(--accent-2);
+  background: rgba(255, 209, 102, 0.07);
+  font-size: 12.8px;
+  border-radius: 0 8px 8px 0;
+}
+.sheet-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.sheet-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-size: 12px;
+}
+.sheet-foot {
+  margin-top: 34px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--fg-faint);
+  text-align: center;
+}
+
+/* ---------------- Impression ---------------- */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+  body {
+    color: #111;
+  }
+  .canvas-layer,
+  .no-print,
+  .settings-fab,
+  .toasts {
+    display: none !important;
+  }
+  .app,
+  .ui-layer,
+  .sheet-screen {
+    position: static;
+    inset: auto;
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+  .sheet {
+    overflow: visible;
+    max-width: none;
+    padding: 0;
+    color: #111;
+    font-size: 10.5pt;
+  }
+  .sheet h1,
+  .sheet h2,
+  .sheet h3,
+  .sheet b {
+    color: #000;
+  }
+  .sheet h3 {
+    color: #1a5f6b;
+  }
+  .sheet-head {
+    border-bottom-color: #1a5f6b;
+  }
+  .sheet-sub,
+  .sheet-id,
+  .sheet-small,
+  .sheet-cat,
+  .sheet-acr,
+  .sheet-foot,
+  .faint {
+    color: #444 !important;
+  }
+  .sheet-cat {
+    color: #1a5f6b !important;
+  }
+  .sheet-table th {
+    color: #444;
+    border-bottom-color: #999;
+  }
+  .sheet-table td {
+    border-bottom-color: #ddd;
+  }
+  .sheet-table tr:nth-child(even) td {
+    background: #f5f5f5;
+  }
+  .sheet-note {
+    background: #fff8e5;
+    border-left-color: #d0a03a;
+  }
+  .sheet-badge {
+    border-color: #999;
+  }
+  .star {
+    color: #ccc;
+  }
+  .star.on {
+    color: #b8860b;
+    text-shadow: none;
+  }
+  .sheet section {
+    page-break-inside: avoid;
+  }
+}
