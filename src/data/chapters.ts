@@ -106,8 +106,10 @@ export const CHAPTERS: Chapter[] = [
     icon: '🔌',
     title: 'Le câblage',
     subtitle: 'Distribue le courant et les données',
-    goal: 'Relie chaque câble de l\'alimentation au bon connecteur.',
-    objective: 'Identifier les principaux câbles internes et leur destination.',
+    goal:
+      "On te guide pas à pas : pour chaque câble, tu cliques sur son point de départ, puis sur le connecteur d’arrivée. Rien à deviner, tout est montré et expliqué.",
+    objective:
+      "Suivre le trajet des principaux câbles internes : ce qu’ils transportent, d’où ils partent et où ils arrivent.",
     requires: 'montage',
     xp: 180,
     minutes: 12,
@@ -118,9 +120,11 @@ export const CHAPTERS: Chapter[] = [
     n: 7,
     icon: '🖥️',
     title: 'Les périphériques',
-    subtitle: 'Branche tout ce qui se voit',
-    goal: "Branche chaque périphérique sur la bonne prise à l'arrière, puis classe-le en entrée ou sortie.",
-    objective: 'Reconnaître les prises et distinguer périphériques d\'entrée et de sortie.',
+    subtitle: 'Reconnais-les, puis branche-les',
+    goal:
+      "D’abord tu reconnais chaque périphérique et tu dis s’il est en entrée ou en sortie. Ensuite tu attrapes la fiche au bout de son câble et tu la déposes sur la bonne prise, à l’arrière de la machine.",
+    objective:
+      "Nommer les périphériques courants, distinguer entrée et sortie, et reconnaître chaque fiche (USB, HDMI, RJ45, jack, secteur) avec sa prise.",
     requires: 'montage',
     xp: 170,
     minutes: 12,
