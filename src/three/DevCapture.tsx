@@ -16,6 +16,7 @@ declare global {
     __shot?: (name?: string, frames?: number) => Promise<string>
     __ui?: (name?: string, frames?: number) => Promise<string>
     __r3f?: unknown
+    __mini?: unknown
   }
 }
 
@@ -72,11 +73,22 @@ function rootVars() {
   return [...new Set(names)].map((n) => n + ':' + cs.getPropertyValue(n)).join(';')
 }
 
-export function DevCapture() {
+/**
+ * `secondary` : pour un canvas annexe (la vignette des corrections).
+ * Il se publie sur `window.__mini` et n'installe pas les fonctions de
+ * capture, qui restent celles de la scène principale.
+ */
+export function DevCapture({ secondary = false }: { secondary?: boolean } = {}) {
   const store = useThree((s) => s)
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
+    if (secondary) {
+      window.__mini = store
+      return () => {
+        if (window.__mini === store) window.__mini = undefined
+      }
+    }
     window.__r3f = store
     const s = store as unknown as R3FLike
 
@@ -129,7 +141,7 @@ export function DevCapture() {
       ctx.drawImage(img, 0, 0)
       return post(name, out.toDataURL('image/png'))
     }
-  }, [store])
+  }, [store, secondary])
 
   return null
 }

@@ -34,7 +34,16 @@ function cableCurve(from: Vec3, to: Vec3) {
   return new THREE.CatmullRomCurve3([a, m1, m2, b], false, 'catmullrom', 0.4)
 }
 
-export function Cable3D({ cable, animate = false }: { cable: CableDef; animate?: boolean }) {
+export function Cable3D({
+  cable,
+  animate = false,
+  preview = false,
+}: {
+  cable: CableDef
+  animate?: boolean
+  /** Tracé fantôme : montre le trajet AVANT de brancher (guidage) */
+  preview?: boolean
+}) {
   const to = CONNECTORS[cable.to].position
   const geo = useMemo(() => {
     const curve = cableCurve(cable.from, to)
@@ -43,8 +52,13 @@ export function Cable3D({ cable, animate = false }: { cable: CableDef; animate?:
 
   const mesh = useRef<THREE.Mesh>(null)
   const t = useRef(animate ? 0 : 1)
-  useFrame((_, dt) => {
+  useFrame((state, dt) => {
     if (!mesh.current) return
+    if (preview) {
+      const m = mesh.current.material as THREE.MeshStandardMaterial
+      m.opacity = 0.22 + (Math.sin(state.clock.elapsedTime * 3.2) * 0.5 + 0.5) * 0.2
+      return
+    }
     if (t.current < 1) {
       t.current = Math.min(1, t.current + dt * 2)
       mesh.current.scale.setScalar(0.9 + t.current * 0.1)
@@ -54,8 +68,15 @@ export function Cable3D({ cable, animate = false }: { cable: CableDef; animate?:
   })
 
   return (
-    <mesh ref={mesh} geometry={geo} castShadow>
-      <meshStandardMaterial color={cable.color} roughness={0.72} metalness={0.12} transparent />
+    <mesh ref={mesh} geometry={geo} castShadow={!preview} raycast={() => null}>
+      <meshStandardMaterial
+        color={preview ? '#4dd0e1' : cable.color}
+        roughness={0.72}
+        metalness={0.12}
+        transparent
+        depthWrite={!preview}
+        opacity={preview ? 0.3 : 1}
+      />
     </mesh>
   )
 }
@@ -64,6 +85,24 @@ export function Cable3D({ cable, animate = false }: { cable: CableDef; animate?:
 /*  Repère de branchement cliquable                                  */
 /* ---------------------------------------------------------------- */
 
+export type MarkerState = 'idle' | 'active' | 'ok' | 'bad' | 'dim'
+
+const MARKER_COLOR: Record<MarkerState, string> = {
+  idle: '#4dd0e1',
+  active: '#ffd166',
+  ok: '#66d17a',
+  bad: '#ff6b6b',
+  dim: '#7b8496',
+}
+
+const MARKER_OPACITY: Record<MarkerState, number> = {
+  idle: 0.22,
+  active: 0.4,
+  ok: 0.34,
+  bad: 0.36,
+  dim: 0.1,
+}
+
 export function ConnectorMarker({
   id,
   state = 'idle',
@@ -71,7 +110,7 @@ export function ConnectorMarker({
   onClick,
 }: {
   id: ConnectorId
-  state?: 'idle' | 'active' | 'ok' | 'bad'
+  state?: MarkerState
   label?: string
   onClick?: (id: ConnectorId) => void
 }) {
@@ -80,33 +119,39 @@ export function ConnectorMarker({
 
   useFrame((s) => {
     if (!g.current) return
-    const k = state === 'idle' ? 1 : 1 + Math.sin(s.clock.elapsedTime * 4.5) * 0.13
+    const k =
+      state === 'idle' || state === 'dim' ? 1 : 1 + Math.sin(s.clock.elapsedTime * 4.5) * 0.16
     g.current.scale.setScalar(k)
   })
 
-  const color =
-    state === 'ok' ? '#66d17a' : state === 'bad' ? '#ff6b6b' : state === 'active' ? '#ffd166' : '#4dd0e1'
+  const color = MARKER_COLOR[state]
 
   return (
     <group position={c.position}>
       <group ref={g}>
         <mesh
+          raycast={onClick ? undefined : () => null}
           onClick={(e) => {
             e.stopPropagation()
             onClick?.(id)
           }}
           onPointerOver={(e) => {
             e.stopPropagation()
-            document.body.style.cursor = 'pointer'
+            if (onClick) document.body.style.cursor = 'pointer'
           }}
           onPointerOut={() => (document.body.style.cursor = '')}
         >
           <sphereGeometry args={[c.radius, 18, 14]} />
-          <meshBasicMaterial color={color} transparent opacity={state === 'idle' ? 0.22 : 0.36} depthWrite={false} />
+          <meshBasicMaterial color={color} transparent opacity={MARKER_OPACITY[state]} depthWrite={false} />
         </mesh>
-        <mesh>
+        <mesh raycast={() => null}>
           <sphereGeometry args={[c.radius * 0.42, 14, 10]} />
-          <meshBasicMaterial color={color} transparent opacity={0.85} depthWrite={false} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={state === 'dim' ? 0.35 : 0.85}
+            depthWrite={false}
+          />
         </mesh>
       </group>
       {label && (
@@ -133,39 +178,45 @@ export function PortMarker({
 }: {
   position: Vec3
   radius?: number
-  state?: 'idle' | 'active' | 'ok' | 'bad'
+  state?: MarkerState
   label?: string
   onClick?: () => void
 }) {
   const g = useRef<THREE.Group>(null)
   useFrame((s) => {
     if (!g.current) return
-    const k = state === 'idle' ? 1 : 1 + Math.sin(s.clock.elapsedTime * 5) * 0.14
+    const k =
+      state === 'idle' || state === 'dim' ? 1 : 1 + Math.sin(s.clock.elapsedTime * 5) * 0.16
     g.current.scale.setScalar(k)
   })
-  const color =
-    state === 'ok' ? '#66d17a' : state === 'bad' ? '#ff6b6b' : state === 'active' ? '#ffd166' : '#4dd0e1'
+  const color = MARKER_COLOR[state]
 
   return (
     <group position={position}>
       <group ref={g}>
         <mesh
+          raycast={onClick ? undefined : () => null}
           onClick={(e) => {
             e.stopPropagation()
             onClick?.()
           }}
           onPointerOver={(e) => {
             e.stopPropagation()
-            document.body.style.cursor = 'pointer'
+            if (onClick) document.body.style.cursor = 'pointer'
           }}
           onPointerOut={() => (document.body.style.cursor = '')}
         >
           <sphereGeometry args={[radius, 16, 12]} />
-          <meshBasicMaterial color={color} transparent opacity={0.28} depthWrite={false} />
+          <meshBasicMaterial color={color} transparent opacity={MARKER_OPACITY[state]} depthWrite={false} />
         </mesh>
-        <mesh>
+        <mesh raycast={() => null}>
           <sphereGeometry args={[radius * 0.38, 12, 10]} />
-          <meshBasicMaterial color={color} transparent opacity={0.9} depthWrite={false} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={state === 'dim' ? 0.4 : 0.9}
+            depthWrite={false}
+          />
         </mesh>
       </group>
       {label && (

@@ -201,13 +201,10 @@ export function FanUnit({
 
       {/* Rotor */}
       <group ref={rotor} position={[0, 0, 0]}>
-        <mesh castShadow>
-          <cylinderGeometry args={[hubR, hubR * 0.96, thickness * 0.62, 24]} />
+        {/* Moyeu central, un simple cylindre aligné sur l'axe de rotation (Z) */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[hubR, hubR, thickness * 0.9, 24]} />
           <meshStandardMaterial color={hubColor} roughness={0.4} metalness={0.35} />
-        </mesh>
-        <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[hubR * 0.72, hubR * 0.72, thickness * 0.64, 20]} />
-          <meshStandardMaterial color="#0f1114" roughness={0.5} />
         </mesh>
         {Array.from({ length: blades }).map((_, i) => (
           <mesh

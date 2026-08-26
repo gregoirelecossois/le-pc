@@ -5,9 +5,10 @@
 
 import { Html } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { memo, useMemo, useRef, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import * as THREE from 'three'
-import { BOUNDS, SLOTS, type Vec3 } from './layout'
+import { BOUNDS, SLOTS, minExplodeY, type Vec3 } from './layout'
+import { watchDrag, wasDragged } from './dragGuard'
 import { M } from './materials'
 import { CaseShell, PartModel, type PartId } from './models'
 import { COMPONENTS, type ComponentId } from '@/data/components'
@@ -26,6 +27,9 @@ const HIGHLIGHT_COLORS = {
 } as const
 
 export type HighlightKind = keyof typeof HIGHLIGHT_COLORS
+
+/** Objet ignoré par le lancer de rayon (donc par les clics et le survol). */
+const NO_RAYCAST = () => null
 
 function BoxHighlight({
   size,
@@ -50,11 +54,16 @@ function BoxHighlight({
 
   return (
     <group ref={g} position={offset}>
-      <mesh renderOrder={2}>
+      {/* `raycast` neutralisé : la boîte de surbrillance est PLUS GRANDE que
+          la pièce et se dresse devant elle. Sans cela, celle de la carte mère
+          (5 x 30 x 24 cm) intercepte tous les clics destinés aux pièces posées
+          dessus — processeur, pile CMOS, SSD — qui devenaient impossibles à
+          attraper au démontage. */}
+      <mesh renderOrder={2} raycast={NO_RAYCAST}>
         <boxGeometry args={size} />
         <meshBasicMaterial color={color} transparent opacity={0.07} depthWrite={false} />
       </mesh>
-      <lineSegments renderOrder={3}>
+      <lineSegments renderOrder={3} raycast={NO_RAYCAST}>
         <edgesGeometry args={[edges]} />
         <lineBasicMaterial color={color} transparent opacity={0.95} depthTest={false} />
       </lineSegments>
@@ -128,12 +137,15 @@ const PartSlot = memo(function PartSlot({
     [slot],
   )
 
+  // Plancher : une pièce écartée ne doit jamais s'enfoncer dans le sol.
+  const floorY = useMemo(() => minExplodeY(id), [id])
+
   useFrame((_, dt) => {
     if (!g.current) return
     // position finale = emplacement + décalage de vue éclatée
     target.set(
       slot.position[0] + slot.explode[0] * explode,
-      slot.position[1] + slot.explode[1] * explode,
+      Math.max(slot.position[1] + slot.explode[1] * explode, floorY),
       slot.position[2] + slot.explode[2] * explode,
     )
     if (t.current < 1) {
@@ -169,6 +181,8 @@ const PartSlot = memo(function PartSlot({
         interactive
           ? (e) => {
               e.stopPropagation()
+              // relâché après avoir fait pivoter la vue : ce n'est pas une réponse
+              if (wasDragged()) return
               onClick?.(id)
             }
           : undefined
@@ -242,10 +256,33 @@ export interface PcRigProps {
   /** Composants qui viennent d'être posés : jouent l'animation d'insertion */
   entering?: ComponentId[]
   onPartClick?: (id: ComponentId) => void
+  /**
+   * Le boîtier réagit-il au pointeur ?
+   *
+   * Trois.js ne teste QUE les objets porteurs d'un gestionnaire : couper
+   * celui du boîtier rend cliquables les pièces qu'il masque — disque dur
+   * et lecteur de disques, cachés derrière la façade et la cage. Le
+   * démontage s'en sert, puisqu'on n'y « retire » jamais le boîtier.
+   */
+  casePickable?: boolean
+  /**
+   * Restreint les étiquettes flottantes à ces pièces.
+   * La visite guidée s'en sert pour ne nommer que ce qui a déjà été
+   * découvert : l'élève voit d'un coup d'œil ce qu'il lui reste à trouver.
+   */
+  labelOnly?: ComponentId[]
   children?: ReactNode
 }
 
-export function PcRig({ interactive = true, highlights = {}, entering = [], onPartClick, children }: PcRigProps) {
+export function PcRig({
+  interactive = true,
+  highlights = {},
+  entering = [],
+  onPartClick,
+  labelOnly,
+  casePickable = true,
+  children,
+}: PcRigProps) {
   const installed = useBuild((s) => s.installed)
   const explode = useBuild((s) => s.explode)
   const hovered = useBuild((s) => s.hovered)
@@ -257,6 +294,9 @@ export function PcRig({ interactive = true, highlights = {}, entering = [], onPa
   const labels = useBuild((s) => s.labels)
   const setBuild = useBuild((s) => s.set)
 
+  // Surveille le pointeur pour distinguer un clic d'une rotation de vue.
+  useEffect(watchDrag, [])
+
   const installedSet = useMemo(() => new Set(installed), [installed])
   const parts = useMemo(() => installed.filter((id): id is PartId => id !== 'case'), [installed])
 
@@ -266,18 +306,19 @@ export function PcRig({ interactive = true, highlights = {}, entering = [], onPa
     <group name="pc">
       <group
         onPointerOver={
-          interactive
+          interactive && casePickable
             ? (e) => {
                 e.stopPropagation()
                 setBuild({ hovered: 'case' })
               }
             : undefined
         }
-        onPointerOut={interactive ? () => setBuild({ hovered: null }) : undefined}
+        onPointerOut={interactive && casePickable ? () => setBuild({ hovered: null }) : undefined}
         onClick={
-          interactive
+          interactive && casePickable
             ? (e) => {
                 e.stopPropagation()
+                if (wasDragged()) return
                 onPartClick?.('case')
               }
             : undefined
@@ -310,7 +351,7 @@ export function PcRig({ interactive = true, highlights = {}, entering = [], onPa
           installed={installedSet}
           entering={entering.includes(id)}
           highlight={highlights[id] ?? (hovered === id ? 'hover' : selected === id ? 'select' : null)}
-          showLabel={labels}
+          showLabel={labels && (!labelOnly || labelOnly.includes(id))}
           interactive={interactive}
           onOver={(x) => setBuild({ hovered: x })}
           onOut={() => setBuild({ hovered: null })}

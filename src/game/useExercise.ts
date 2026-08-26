@@ -8,6 +8,8 @@
 
 import { create } from 'zustand'
 import { CHAPTER_BY_ID, type ChapterId } from '@/data/chapters'
+import type { PartId } from '@/three/models'
+import type { PeripheralModelId } from '@/three/models/PeripheralParts'
 import { starsFor, useGame } from '@/state/useGame'
 import { sfx } from '@/audio/sfx'
 
@@ -17,8 +19,27 @@ export interface Feedback {
   kind: 'ok' | 'bad' | 'info'
   title: string
   text?: string
+  /** Pièce montrée en 3D dans la fenêtre, si la correction porte sur une pièce */
+  part?: PartId | null
+  /** Périphérique montré en 3D, pour le chapitre 7 */
+  peri?: PeripheralModelId | null
+  /**
+   * Exécuté quand l'élève ferme la fenêtre.
+   * C'est lui qui fait passer à la question suivante : la correction est
+   * lue à son rythme, elle ne s'efface plus toute seule au bout de 3 s.
+   */
+  onDismiss?: () => void
   /** Identifiant pour forcer la ré-animation même si le texte est identique */
   seq: number
+}
+
+/** Options communes à `good`, `bad` et `info`. */
+export interface FeedbackOpts {
+  part?: PartId | null
+  peri?: PeripheralModelId | null
+  onDismiss?: () => void
+  /** `good` seulement : de combien avance la progression (1 par défaut) */
+  step?: number
 }
 
 interface ExerciseState {
@@ -41,9 +62,9 @@ interface ExerciseState {
   begin: (chapter: ChapterId, total: number) => void
   play: () => void
   tick: (dt: number) => void
-  good: (title: string, text?: string, step?: number) => void
-  bad: (title: string, text?: string) => void
-  info: (title: string, text?: string) => void
+  good: (title: string, text?: string, opts?: FeedbackOpts) => void
+  bad: (title: string, text?: string, opts?: FeedbackOpts) => void
+  info: (title: string, text?: string, opts?: FeedbackOpts) => void
   clearFeedback: () => void
   hint: () => void
   setBusy: (v: boolean) => void
@@ -93,19 +114,59 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
   setTotal: (total) => set({ total }),
   setBusy: (busy) => set({ busy }),
 
-  good: (title, text, step = 1) => {
+  good: (title, text, opts = {}) => {
     sfx.good()
-    set((s) => ({ done: s.done + step, feedback: { kind: 'ok', title, text, seq: seq++ } }))
+    set((s) => ({
+      done: s.done + (opts.step ?? 1),
+      feedback: {
+        kind: 'ok',
+        title,
+        text,
+        part: opts.part,
+        peri: opts.peri,
+        onDismiss: opts.onDismiss,
+        seq: seq++,
+      },
+    }))
   },
 
-  bad: (title, text) => {
+  bad: (title, text, opts = {}) => {
     sfx.error()
-    set((s) => ({ mistakes: s.mistakes + 1, penalty: s.penalty + 10, feedback: { kind: 'bad', title, text, seq: seq++ } }))
+    set((s) => ({
+      mistakes: s.mistakes + 1,
+      penalty: s.penalty + 10,
+      feedback: {
+        kind: 'bad',
+        title,
+        text,
+        part: opts.part,
+        peri: opts.peri,
+        onDismiss: opts.onDismiss,
+        seq: seq++,
+      },
+    }))
   },
 
-  info: (title, text) => set({ feedback: { kind: 'info', title, text, seq: seq++ } }),
+  info: (title, text, opts = {}) =>
+    set({
+      feedback: {
+        kind: 'info',
+        title,
+        text,
+        part: opts.part,
+        peri: opts.peri,
+        onDismiss: opts.onDismiss,
+        seq: seq++,
+      },
+    }),
 
-  clearFeedback: () => set({ feedback: null }),
+  // La suite de l'exercice est déclenchée par la fermeture de la fenêtre,
+  // pas par une minuterie : l'élève avance quand il a lu.
+  clearFeedback: () => {
+    const done = get().feedback?.onDismiss
+    set({ feedback: null })
+    done?.()
+  },
 
   hint: () => {
     sfx.click()

@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand'
-import type { ComponentId } from '@/data/components'
+import { COMPONENT_IDS, type ComponentId } from '@/data/components'
 import type { CameraViewId } from '@/three/layout'
 
 export interface BuildState {
@@ -18,6 +18,12 @@ export interface BuildState {
   dragging: ComponentId | null
   /** Position du curseur en coordonnées normalisées (-1..1), pendant un glisser */
   dragNdc: [number, number]
+  /**
+   * Un objet libre est tenu à la main (fiche d'un périphérique).
+   * Comme `dragging`, il fige l'orbite de la caméra — mais il ne désigne
+   * pas un composant du catalogue.
+   */
+  handDrag: boolean
   /** Emplacement le plus proche du curseur (aimantation) */
   candidate: ComponentId | null
   /** Emplacement à faire clignoter */
@@ -58,6 +64,7 @@ const BASE = {
   hovered: null,
   dragging: null,
   dragNdc: [0, 0] as [number, number],
+  handDrag: false,
   candidate: null,
   ghost: null,
   flash: null,
@@ -100,22 +107,13 @@ export const useBuild = create<BuildState>()((set, get) => ({
     set({ ...BASE, installed, plugged: {}, cables: [] }),
 }))
 
-/** Tous les composants, boîtier compris. */
-export const ALL_INSTALLED: ComponentId[] = [
-  'case',
-  'psu',
-  'motherboard',
-  'cpu',
-  'cooler',
-  'ram1',
-  'ram2',
-  'ssd',
-  'hdd',
-  'gpu',
-  'fanFront',
-  'fanRear',
-  'cmos',
-]
+/**
+ * Tous les composants, boîtier compris.
+ *
+ * Déduit du catalogue plutôt que recopié à la main : ajouter une pièce à
+ * `COMPONENTS` suffit pour qu'elle apparaisse dans la machine complète.
+ */
+export const ALL_INSTALLED: ComponentId[] = [...COMPONENT_IDS]
 
 /* Accès depuis la console en développement (mise au point du rendu 3D). */
 if (import.meta.env.DEV) {

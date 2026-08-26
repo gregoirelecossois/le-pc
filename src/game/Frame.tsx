@@ -8,6 +8,7 @@ import { CHAPTER_BY_ID } from '@/data/chapters'
 import { useGame } from '@/state/useGame'
 import { useBuild } from '@/state/useBuild'
 import { Btn, Counter, Modal, Stars, fmtTime } from '@/ui/bits'
+import { PartSpinner } from '@/three/PartSpinner'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -134,7 +135,7 @@ export function ExerciseIntro({ children, onStart }: { children?: ReactNode; onS
         {ch.objective}
       </div>
 
-      <div className="row" style={{ marginTop: 22 }}>
+      <div className="modal-actions">
         <Btn
           variant="primary"
           size="lg"
@@ -164,27 +165,68 @@ export function ExerciseIntro({ children, onStart }: { children?: ReactNode; onS
 /*  Bandeau de retour (bien / pas bien)                              */
 /* ---------------------------------------------------------------- */
 
+const FB_LABEL = {
+  ok: { icon: '✅', word: 'Bravo' },
+  bad: { icon: '💡', word: 'Presque' },
+  info: { icon: 'ℹ️', word: 'À savoir' },
+} as const
+
+/**
+ * Fenêtre de correction, au centre de l'écran.
+ *
+ * Elle remplace l'ancien bandeau qui s'effaçait tout seul : un élève lent
+ * n'avait pas le temps de le lire. Ici on montre la pièce concernée en 3D,
+ * une phrase d'explication, et rien ne bouge tant que « J'ai compris »
+ * n'a pas été cliqué.
+ */
 export function Feedback() {
   const fb = useExercise((s) => s.feedback)
   const clear = useExercise((s) => s.clearFeedback)
 
+  // La touche Entrée (ou Espace) ferme aussi : plus rapide au clavier.
   useEffect(() => {
     if (!fb) return
-    const t = setTimeout(clear, fb.kind === 'bad' ? 5200 : 3400)
-    return () => clearTimeout(t)
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault()
+        clear()
+      }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
   }, [fb, clear])
 
   if (!fb) return null
+  const l = FB_LABEL[fb.kind]
+
   return (
-    <div key={fb.seq} className={`feedback feedback-${fb.kind} pop-in`}>
-      <span className="feedback-icon">{fb.kind === 'ok' ? '✅' : fb.kind === 'bad' ? '⚠️' : 'ℹ️'}</span>
-      <div>
-        <b>{fb.title}</b>
-        {fb.text && <p>{fb.text}</p>}
+    <div className="modal-back fb-back" onClick={clear}>
+      <div
+        key={fb.seq}
+        className={`fb card pop-in fb-${fb.kind}`}
+        role="alertdialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {(fb.part || fb.peri) && (
+          <div className="fb-view">
+            <PartSpinner id={fb.part} peri={fb.peri} />
+          </div>
+        )}
+
+        <div className="fb-body">
+          <div className="fb-kind">
+            <span className="fb-icon">{l.icon}</span>
+            {l.word}
+          </div>
+          <h2 className="fb-title">{fb.title}</h2>
+          {fb.text && <p className="fb-text">{fb.text}</p>}
+
+          <Btn variant={fb.kind === 'bad' ? 'gold' : 'primary'} size="lg" className="fb-go" onClick={clear}>
+            J'ai compris
+          </Btn>
+        </div>
       </div>
-      <button className="feedback-close" onClick={clear} aria-label="Fermer">
-        ×
-      </button>
     </div>
   )
 }
@@ -199,12 +241,15 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
   const openChapter = useGame((s) => s.openChapter)
   const results = useGame((s) => s.results)
   const ch = ex.chapter ? CHAPTER_BY_ID[ex.chapter] : null
+  // La dernière correction passe d'abord : sans cela le bilan viendrait
+  // se poser par-dessus une fenêtre que l'élève est en train de lire.
+  const pending = !!ex.feedback
 
   useEffect(() => {
-    if (ex.phase === 'done') sfx.badge()
-  }, [ex.phase])
+    if (ex.phase === 'done' && !pending) sfx.badge()
+  }, [ex.phase, pending])
 
-  if (ex.phase !== 'done' || !ch || !result) return null
+  if (ex.phase !== 'done' || pending || !ch || !result) return null
 
   const nextIdx = ch.n // les chapitres sont numérotés à partir de 1
   const next = Object.values(CHAPTER_BY_ID).find((c) => c.n === nextIdx + 1)
@@ -248,7 +293,7 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
         {ch.objective}
       </div>
 
-      <div className="row" style={{ marginTop: 22 }}>
+      <div className="modal-actions">
         {next && nextUnlocked && (
           <Btn
             variant="primary"

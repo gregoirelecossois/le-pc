@@ -164,6 +164,7 @@ export function RevisionSheet() {
               <tr>
                 <th>Périphérique</th>
                 <th>Type</th>
+                <th>Sa fiche</th>
                 <th>Où le brancher</th>
               </tr>
             </thead>
@@ -174,6 +175,7 @@ export function RevisionSheet() {
                     {p.icon} <b>{p.name}</b>
                   </td>
                   <td className="sheet-cat">{KIND_LABEL[p.kind]}</td>
+                  <td className="sheet-small">{p.plugName}</td>
                   <td className="sheet-small">{p.hint}</td>
                 </tr>
               ))}

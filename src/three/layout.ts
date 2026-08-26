@@ -131,7 +131,10 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     position: [1.0, 5.0, 15.5],
     approach: [0, 1, 0],
     approachDist: 14,
-    explode: [17, -15, -11],
+    // L'alimentation est déjà au ras du plancher : elle sort à plat,
+    // vers le panneau ouvert et l'avant. La descendre la ferait passer
+    // sous le sol (voir EXPLODE_FLOOR).
+    explode: [13, 0, -24],
     labelOffset: [0, -4.5, -9],
     snapRadius: 9,
   },
@@ -196,7 +199,9 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     position: [S + 6.12, MB_POINTS.pcie16.y - 0.75, 8.45],
     approach: [0, 1, 0],
     approachDist: 13,
-    explode: [23, -17, -3],
+    // La carte reste AU-DESSUS de l'alimentation, comme dans le boîtier :
+    // la descendre davantage la faisait entrer dedans.
+    explode: [23, -8, -3],
     labelOffset: [0, -5.0, -13],
     snapRadius: 7,
   },
@@ -205,9 +210,32 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     position: [-1.0, 2.6, -12.0],
     approach: [1, 0, 0],
     approachDist: 12,
-    explode: [19, -5, -19],
+    // Idem : le disque dur glisse hors de sa cage, il ne plonge pas.
+    explode: [22, 2, -13],
     labelOffset: [0, 3.4, -9],
     snapRadius: 7,
+  },
+
+  ssd25: {
+    // Posé à plat sur le dessus de la cage à disques, comme dans un vrai
+    // boîtier moderne qui garde un berceau 2,5" au-dessus de la baie 3,5".
+    position: [-1.0, 5.6, -12.0],
+    approach: [0, 1, 0],
+    approachDist: 9,
+    explode: [24, 4, -6],
+    labelOffset: [0, 2.6, -7],
+    snapRadius: 5,
+  },
+
+  odd: {
+    // Baie 5,25" en haut de la façade : le seul emplacement ouvert sur
+    // l'extérieur, au-dessus du ventilateur avant.
+    position: [1.4, 41.6, -15.7],
+    approach: [0, 0, -1],
+    approachDist: 14,
+    explode: [16, 7, -24],
+    labelOffset: [0, 3.6, -6],
+    snapRadius: 8,
   },
 
   fanFront: {
@@ -232,8 +260,11 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
     position: [S + 0.3, MB_POINTS.cmos.y, MB_POINTS.cmos.z],
     approach: [1, 0, 0],
     approachDist: 8,
-    explode: [11, -8, -4],
-    labelOffset: [2, -1.8, 0],
+    // Petite pièce noyée dans la zone chipset : on la sort franchement
+    // vers le panneau ouvert (+X dominant), en la remontant et en
+    // l'amenant vers l'avant pour la dégager des voisins.
+    explode: [26, 6, -7],
+    labelOffset: [3, 3.2, 0],
     snapRadius: 2.6,
   },
 }
@@ -266,14 +297,27 @@ export const CAMERA_VIEWS = {
   inside: { position: [82, 27, 10] as Vec3, target: [-2, 26, 8] as Vec3 },
   /** Recul pour la vue éclatée complète */
   exploded: { position: [112, 74, 98] as Vec3, target: [8, 24, 0] as Vec3 },
+  /**
+   * Câblage : le flanc ouvert en entier.
+   * Les deux extrémités d'un câble (le bloc d'alimentation tout en bas et
+   * le connecteur visé, parfois tout en haut) doivent tenir dans le cadre.
+   */
+  cablage: { position: [104, 30, 14] as Vec3, target: [2, 24, 4] as Vec3 },
   /** Zoom sur le socket, la mémoire et le ventirad */
   cpuZone: { position: [54, 47, 6] as Vec3, target: [-1, 33, 12] as Vec3 },
   /** Vue arrière : connectique + périphériques */
   rear: { position: [-5, 30, 100] as Vec3, target: [0, 23, 23] as Vec3 },
+  /**
+   * Banc de branchement : la connectique arrière à gauche, le périphérique
+   * et son câble à droite. Le cadre doit contenir les deux.
+   */
+  branchement: { position: [6, 34, 142] as Vec3, target: [12, 25, 14] as Vec3 },
   /** Vue basse : alimentation et disque dur */
   bottom: { position: [74, 17, 50] as Vec3, target: [0, 6, 2] as Vec3 },
   /** Présentoir : une seule pièce isolée, pour les quiz */
   showcase: { position: [8, 30, 60] as Vec3, target: [0, 24, 0] as Vec3 },
+  /** Quatre pièces alignées, pour le QCM « à quoi ça sert ? » */
+  lineup: { position: [0, 32, 96] as Vec3, target: [0, 30, 0] as Vec3 },
   /** Établi : le boîtier à gauche, les pièces en attente à droite */
   bench: { position: [72, 44, -78] as Vec3, target: [4, 20, -6] as Vec3 },
 } as const
@@ -299,11 +343,30 @@ export const BOUNDS: Record<Exclude<ComponentId, 'case'>, Bounds> = {
   ram2: { size: [5.3, 13.6, 1.3], offset: [2.65, 0, 0] },
   ssd: { size: [0.8, 2.6, 8.4], offset: [0.1, 0, 0] },
   hdd: { size: [10.4, 3.1, 15.2], offset: [0, 0, 0] },
+  ssd25: { size: [7.2, 1.4, 10.2], offset: [0, 0, 0] },
+  // façade comprise : le bloc dépasse un peu vers l'avant
+  odd: { size: [15.2, 4.6, 18.2], offset: [0, 0, -0.4] },
   gpu: { size: [11.8, 4.2, 26.2], offset: [-0.2, -0.3, -0.15] },
   psu: { size: [15.2, 8.8, 14.2], offset: [0, 0, 0] },
   fanFront: { size: [12.2, 12.2, 2.8], offset: [0, 0, 0] },
   fanRear: { size: [12.2, 12.2, 2.8], offset: [0, 0, 0] },
-  cmos: { size: [0.5, 2.1, 2.1], offset: [0, 0, 0] },
+  // Boîte de clic élargie : la pile est minuscule, on agrandit la cible.
+  cmos: { size: [2.6, 2.8, 2.8], offset: [0, 0, 0] },
+}
+
+/**
+ * Hauteur minimale du BAS d'une pièce en vue éclatée.
+ *
+ * Le sol du décor est à y = -1,85. Sans garde-fou, les pièces dont le
+ * vecteur d'éclatement descend (alimentation, disque dur) s'enfoncent
+ * dedans et deviennent inatteignables.
+ */
+export const EXPLODE_FLOOR = 0.6
+
+/** Ordonnée minimale de l'ORIGINE du modèle pour que sa boîte reste au-dessus du sol. */
+export function minExplodeY(id: Exclude<ComponentId, 'case'>): number {
+  const b = BOUNDS[id]
+  return EXPLODE_FLOOR + b.size[1] / 2 - b.offset[1]
 }
 
 /** Position monde du centre de la boîte englobante d'un composant installé. */

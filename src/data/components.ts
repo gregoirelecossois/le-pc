@@ -13,7 +13,9 @@ export type ComponentId =
   | 'ram2'
   | 'gpu'
   | 'ssd'
+  | 'ssd25'
   | 'hdd'
+  | 'odd'
   | 'fanFront'
   | 'fanRear'
   | 'cmos'
@@ -285,6 +287,51 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     color: '#a78bfa',
   },
 
+  ssd25: {
+    id: 'ssd25',
+    name: 'Le SSD 2,5 pouces (SATA)',
+    shortName: 'SSD 2,5"',
+    category: 'stockage',
+    role: "C'est un SSD au format d'un petit disque : même mémoire flash que le M.2, mais dans un boîtier plat relié par deux câbles.",
+    analogy:
+      "Le même cerveau de stockage que le M.2, rangé dans une boîte à chaussures au lieu d'être collé à la carte mère.",
+    details: [
+      "Il mesure 2,5 pouces (7 cm de large), l'ancien format des disques d'ordinateur portable.",
+      'Comme le disque dur, il demande DEUX câbles : SATA données + SATA alimentation.',
+      "Il est 4 à 5 fois plus lent qu'un M.2 NVMe, mais toujours 10 fois plus rapide qu'un disque dur mécanique.",
+    ],
+    handling:
+      "On le visse à plat dans son berceau, ou on le glisse dans un tiroir. Aucun risque de choc : il n'a pas de pièce mobile.",
+    funFact:
+      "C'est le format qu'on utilise pour redonner une seconde vie à un vieux PC : remplacer son disque dur par un SSD 2,5\" le rend spectaculairement plus rapide.",
+    installOrder: 9,
+    requires: ['case'],
+    distractors: ['Le disque dur', 'Le SSD M.2', 'Le lecteur de disques'],
+    color: '#c084fc',
+  },
+
+  odd: {
+    id: 'odd',
+    name: 'Le lecteur de disques (CD / DVD)',
+    shortName: 'Lecteur CD/DVD',
+    category: 'stockage',
+    role: 'Il lit (et parfois grave) les CD, DVD et Blu-ray grâce à un rayon laser qui parcourt la surface du disque.',
+    analogy: "Un tourne-disque moderne : le disque tourne, mais c'est une lumière qui lit à la place d'une aiguille.",
+    details: [
+      "Il occupe une baie 5,25 pouces en haut du boîtier, la seule ouverte sur l'extérieur.",
+      'Un CD contient 700 Mo, un DVD 4,7 Go, un Blu-ray 25 Go.',
+      "Il se branche lui aussi en SATA, exactement comme un disque dur.",
+    ],
+    handling:
+      "S'il refuse de s'ouvrir, un trombone déplié dans le petit trou de la façade libère le tiroir à la main.",
+    funFact:
+      "Les ordinateurs récents n'en ont plus : tout passe par Internet ou par clé USB. C'est le composant en train de disparaître.",
+    installOrder: 10,
+    requires: ['case'],
+    distractors: ['Le disque dur', "Le bloc d'alimentation", 'Le SSD 2,5 pouces'],
+    color: '#38bdf8',
+  },
+
   gpu: {
     id: 'gpu',
     name: 'La carte graphique',
@@ -303,7 +350,7 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
       'On enlève d\'abord les caches à l\'arrière du boîtier. Pour la retirer, il faut PENSER à pousser le petit clip au bout du slot.',
     funFact:
       'Une carte graphique de PC de bureau contient souvent plus de 4 000 mini-processeurs travaillant en même temps.',
-    installOrder: 9,
+    installOrder: 11,
     requires: ['motherboard'],
     requiresHint: 'La carte graphique se clipse dans le slot PCIe : installe la carte mère d\'abord.',
     distractors: ['La carte mère', 'La carte réseau', 'Le processeur'],
@@ -325,7 +372,7 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     handling:
       'Pour le nettoyer, on bloque les pales avec le doigt avant de souffler, sinon il produit du courant et peut abîmer la carte mère.',
     funFact: 'Un ventilateur de 120 mm déplace environ 90 m³ d\'air par heure, soit le volume d\'une petite chambre.',
-    installOrder: 10,
+    installOrder: 12,
     requires: ['case'],
     distractors: ['Le ventirad', "Le ventilateur de l'alimentation", 'Le radiateur'],
     color: '#7dd3fc',
@@ -345,7 +392,7 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     ],
     handling: 'On vérifie toujours le sens des flèches sur le cadre avant de visser.',
     funFact: 'Un PC bien ventilé tourne 10 à 15 °C plus frais, ce qui augmente sa durée de vie de plusieurs années.',
-    installOrder: 11,
+    installOrder: 13,
     requires: ['case'],
     distractors: ['Le ventirad', 'Le ventilateur avant', "Le bloc d'alimentation"],
     color: '#7dd3fc',
@@ -366,7 +413,7 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     handling: 'On la retire en poussant le petit clip métallique sur le côté ; elle se soulève toute seule.',
     funFact:
       'C\'est le composant le moins cher du PC (moins d\'un euro) mais son absence empêche parfois la machine de démarrer.',
-    installOrder: 12,
+    installOrder: 14,
     requires: ['motherboard'],
     requiresHint: 'La pile se loge dans son support sur la carte mère.',
     distractors: ["Le bloc d'alimentation", 'Le chipset', 'Le buzzer'],
@@ -375,6 +422,64 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
 }
 
 export const COMPONENT_IDS = Object.keys(COMPONENTS) as ComponentId[]
+
+/* ------------------------------------------------------------------ */
+/*  Pièces jumelles                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Deux barrettes de mémoire, ou deux ventilateurs de boîtier, sont des
+ * pièces RIGOUREUSEMENT identiques. Leur seule différence est l'endroit
+ * où on les monte.
+ *
+ * Un exercice ne doit donc jamais demander de les distinguer l'une de
+ * l'autre : ce serait une question sans réponse observable.
+ */
+const TWINS: Partial<Record<ComponentId, ComponentId>> = {
+  ram1: 'ram2',
+  ram2: 'ram1',
+  fanFront: 'fanRear',
+  fanRear: 'fanFront',
+}
+
+/** `a` et `b` désignent-ils la même pièce, ou deux jumelles interchangeables ? */
+export function sameComponent(a: ComponentId, b: ComponentId): boolean {
+  return a === b || TWINS[a] === b
+}
+
+/**
+ * Nom à employer quand la pièce est montrée SEULE, hors de son contexte
+ * (présentoir du quiz, fenêtre de correction) : on retire le numéro de
+ * barrette ou la position avant/arrière, invérifiables sur la pièce nue.
+ */
+const SOLO_NAMES: Partial<Record<ComponentId, { name: string; short: string }>> = {
+  ram1: { name: 'La mémoire vive', short: 'Mémoire vive' },
+  ram2: { name: 'La mémoire vive', short: 'Mémoire vive' },
+  // même formulation que le leurre du ventirad, pour ne pas laisser croire
+  // à deux pièces différentes
+  fanFront: { name: 'Le ventilateur du boîtier', short: 'Ventilateur' },
+  fanRear: { name: 'Le ventilateur du boîtier', short: 'Ventilateur' },
+}
+
+export function soloName(id: ComponentId): string {
+  return SOLO_NAMES[id]?.name ?? COMPONENTS[id].name
+}
+
+export function soloShortName(id: ComponentId): string {
+  return SOLO_NAMES[id]?.short ?? COMPONENTS[id].shortName
+}
+
+/**
+ * Nom en minuscule pour l'insérer au fil d'une phrase
+ * (« ce n'est pas *le processeur* »).
+ *
+ * Seule la PREMIÈRE lettre est abaissée : un `toLowerCase()` complet
+ * écrirait « le ssd (m.2 nvme) » ou « la pile cmos ».
+ */
+export function lowerName(id: ComponentId): string {
+  const n = soloName(id)
+  return n.charAt(0).toLowerCase() + n.slice(1)
+}
 
 /** Les composants à monter dans l'exercice d'assemblage (le boîtier est déjà là). */
 export const INSTALLABLE_IDS: ComponentId[] = COMPONENT_IDS.filter((id) => id !== 'case').sort(

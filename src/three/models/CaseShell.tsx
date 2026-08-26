@@ -95,6 +95,15 @@ const SLOT_X1 = 4.35
 const SLOT_Y1 = IO_Y0 // 25,6 : les équerres commencent juste sous la connectique
 const SLOT_Y0 = 11.0
 
+/* Ouverture de la baie 5,25" dans la façade (lecteur de disques). */
+const FW = (CASE.width + 0.6) / 2
+const BAY_X0 = -6.9
+const BAY_X1 = 9.7
+const BAY_Y0 = 39.1
+const BAY_Y1 = 44.1
+/** Bandeau de connectique de façade, juste sous la baie. */
+const IO_FRONT_Y = 37.5
+
 const PSU_X0 = -6.6
 const PSU_X1 = 8.6
 const PSU_Y0 = 0.6
@@ -236,15 +245,27 @@ export function CaseShell({
       {/* ---------------- Façade ---------------- */}
       {!hideFront && (
         <group>
-          <mesh position={[0, H / 2, -HD - 0.9]} material={plastic} castShadow receiveShadow>
-            <boxGeometry args={[CASE.width + 0.6, H, 1.8]} />
-          </mesh>
+          {/* Façade percée : la baie 5,25" doit laisser sortir le tiroir du
+              lecteur de disques. On assemble donc quatre morceaux autour de
+              l'ouverture, plutôt qu'une plaque pleine. */}
+          <PlateXY
+            rects={[
+              [-FW, FW, 0, BAY_Y0],
+              [-FW, FW, BAY_Y1, H],
+              [-FW, BAY_X0, BAY_Y0, BAY_Y1],
+              [BAY_X1, FW, BAY_Y0, BAY_Y1],
+            ]}
+            z={-HD - 0.9}
+            thickness={1.8}
+            material={plastic}
+          />
           {/* Grille de façade (l'air frais entre par là) */}
-          <group position={[0, H / 2 + 2, -HD - 1.85]}>
-            <Grille width={17} height={32} step={0.95} hole={0.6} depth={0.14} color="#0c0e11" />
+          <group position={[0, H / 2 - 3, -HD - 1.85]}>
+            <Grille width={17} height={25} step={0.95} hole={0.6} depth={0.14} color="#0c0e11" />
           </group>
-          {/* Bouton d'alimentation */}
-          <group position={[HW - 3.4, H - 3.4, -HD - 1.9]}>
+          {/* Bandeau de connectique, sous la baie 5,25" :
+              bouton d'alimentation, 2 USB et un jack casque. */}
+          <group position={[HW - 3.4, IO_FRONT_Y, -HD - 1.9]}>
             <mesh castShadow>
               <cylinderGeometry args={[0.95, 0.95, 0.5, 22]} />
               <meshStandardMaterial color="#2a2e35" roughness={0.5} metalness={0.6} />
@@ -253,17 +274,16 @@ export function CaseShell({
               <cylinderGeometry args={[0.42, 0.42, 0.12, 18]} />
             </mesh>
           </group>
-          {/* Prises de façade : 2 USB + jack casque */}
           {[
-            [-1.6, '#12151a'],
-            [0.2, '#2f6fd0'],
+            [-4.6, '#12151a'],
+            [-2.9, '#2f6fd0'],
           ].map(([x, c], i) => (
-            <mesh key={i} position={[HW - 3.4 + (x as number), H - 6.2, -HD - 1.85]} castShadow>
+            <mesh key={i} position={[HW - 3.4 + (x as number), IO_FRONT_Y, -HD - 1.85]} castShadow>
               <boxGeometry args={[1.3, 0.7, 0.35]} />
               <meshStandardMaterial color={c as string} roughness={0.6} />
             </mesh>
           ))}
-          <mesh position={[HW - 3.4 + 1.9, H - 6.2, -HD - 1.85]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh position={[HW - 3.4 - 1.5, IO_FRONT_Y, -HD - 1.85]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.34, 0.34, 0.3, 14]} />
             <meshStandardMaterial color="#7bd17b" roughness={0.5} />
           </mesh>
@@ -300,8 +320,9 @@ export function CaseShell({
         ))}
       </Instances>
 
-      {/* ---------------- Cage du disque dur ---------------- */}
+      {/* ---------------- Cage des disques ---------------- */}
       <group>
+        {/* plancher de la baie 3,5" */}
         <mesh position={[-1.0, 1.1, -12.0]} material={inner} castShadow receiveShadow>
           <boxGeometry args={[11.6, 0.16, 16]} />
         </mesh>
@@ -310,6 +331,24 @@ export function CaseShell({
             <boxGeometry args={[0.16, 3.2, 16]} />
           </mesh>
         ))}
+        {/* berceau 2,5" : la tablette sur laquelle se visse le SSD SATA */}
+        <mesh position={[-1.0, 4.28, -12.0]} material={inner} castShadow receiveShadow>
+          <boxGeometry args={[11.6, 0.16, 16]} />
+        </mesh>
+      </group>
+
+      {/* ---------------- Baie 5,25" (lecteur de disques) ---------------- */}
+      <group>
+        {/* joues de la baie */}
+        {[-6.4, 9.2].map((x) => (
+          <mesh key={x} position={[x, 41.6, -13.5]} material={inner} castShadow>
+            <boxGeometry args={[0.16, 5.2, 15]} />
+          </mesh>
+        ))}
+        {/* traverse supérieure */}
+        <mesh position={[1.4, 44.3, -13.5]} material={inner} castShadow receiveShadow>
+          <boxGeometry args={[15.8, 0.16, 15]} />
+        </mesh>
       </group>
 
       {/* ---------------- Panneau latéral vitré ---------------- */}

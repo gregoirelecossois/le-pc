@@ -13,10 +13,12 @@ import * as THREE from 'three'
 import {
   COMPONENTS,
   INSTALLABLE_IDS,
+  soloName,
+  soloShortName,
   type ComponentId,
 } from '@/data/components'
 import { boundsCenter, BOUNDS, SLOTS } from '@/three/layout'
-import { PartModel, type PartId } from '@/three/models'
+import { asPart, PartModel, type PartId } from '@/three/models'
 import { GhostSlot, PcRig } from '@/three/PcRig'
 import { useBuild } from '@/state/useBuild'
 import { Btn } from '@/ui/bits'
@@ -208,11 +210,12 @@ export function AssemblyUi({
       b.install(id)
       setFlash(id)
       setTimeout(() => setFlash(null), 900)
-      ex.good(`${c.shortName} en place !`, c.handling)
+      ex.good(`${soloShortName(id)} en place !`, c.handling, { part: id })
     } else {
       ex.bad(
-        `Ce n'est pas l'emplacement de « ${c.shortName} »`,
-        `Ici, c'est la place de : ${COMPONENTS[cand].name}.`,
+        `Ce n'est pas la place de « ${soloShortName(id)} »`,
+        `Ici, c'est l'emplacement de : ${soloName(cand)}.`,
+        { part: id },
       )
     }
   }, [])
@@ -239,7 +242,7 @@ export function AssemblyUi({
     if (!next) return
     useExercise.getState().hint()
     const c = COMPONENTS[next]
-    useExercise.getState().info(`Prochaine pièce : ${c.shortName}`, c.handling)
+    useExercise.getState().info(`Prochaine pièce : ${soloShortName(next)}`, c.handling, { part: asPart(next) })
   }
 
   return (
@@ -300,7 +303,9 @@ export function AssemblyUi({
                       if (lock) {
                         useExercise
                           .getState()
-                          .info('Pas encore !', c.requiresHint ?? 'Une autre pièce doit être posée avant.')
+                          .info('Pas encore !', c.requiresHint ?? 'Une autre pièce doit être posée avant.', {
+                            part: asPart(id),
+                          })
                         return
                       }
                       e.preventDefault()
@@ -310,7 +315,7 @@ export function AssemblyUi({
                     }}
                   >
                     <span className="traycard-bar" />
-                    <span className="traycard-name">{c.shortName}</span>
+                    <span className="traycard-name">{soloShortName(id)}</span>
                     {c.acronym && <em>{c.acronym}</em>}
                     {lock && <span className="traycard-lock">🔒</span>}
                   </button>
@@ -331,12 +336,12 @@ export function AssemblyUi({
 
           {dragging && (
             <div className="dragbar">
-              Relâche sur l'emplacement qui convient à «&nbsp;{COMPONENTS[dragging].shortName}&nbsp;»
+              Relâche sur l'emplacement qui convient à «&nbsp;{soloShortName(dragging)}&nbsp;»
             </div>
           )}
 
           {!dragging && flash && (
-            <div className="okflash">✅ {COMPONENTS[flash].shortName}</div>
+            <div className="okflash">✅ {soloShortName(flash)}</div>
           )}
 
           {!dragging && !flash && tray.length > 0 && (

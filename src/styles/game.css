@@ -167,6 +167,17 @@
   border-color: var(--c);
   color: #fff;
 }
+/* Pièce encore à trouver : la pastille informe, elle ne se clique pas —
+   on ne découvre un composant qu'en le cliquant dans la machine. */
+.chip.unknown {
+  cursor: default;
+  border-style: dashed;
+  opacity: 0.72;
+}
+.chip.unknown:hover {
+  border-color: var(--line);
+  color: var(--fg-faint);
+}
 
 /* ---------------- Fiche composant ---------------- */
 
@@ -289,55 +300,83 @@
   border-top: 1px solid var(--line);
 }
 
-/* ---------------- Retour d'information ---------------- */
+/* ---------------- Fenêtre de correction ---------------- */
 
-.feedback {
-  position: absolute;
-  left: 50%;
-  bottom: 26px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  max-width: 620px;
-  padding: 14px 44px 14px 17px;
-  border-radius: 14px;
-  background: rgba(14, 18, 25, 0.97);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow);
-  z-index: 55;
+.fb-back {
+  /* au-dessus des panneaux d'exercice, sous l'écran de fin de chapitre */
+  z-index: 70;
 }
-.feedback-icon {
-  font-size: 21px;
-  line-height: 1.2;
+
+.fb {
+  --fb: var(--accent);
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow: hidden auto;
+  border-color: var(--fb);
+  box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--fb) 40%, transparent);
 }
-.feedback b {
-  font-size: 14.5px;
+.fb-ok {
+  --fb: var(--ok);
 }
-.feedback p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
+.fb-bad {
+  --fb: var(--accent-2);
+}
+.fb-info {
+  --fb: var(--accent);
+}
+
+/* La pièce qui tourne */
+.fb-view {
+  height: 232px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+  background: #0c0f15;
+  border-bottom: 1px solid var(--line);
+}
+.fb-view canvas {
+  display: block;
+}
+
+.fb-body {
+  padding: 20px 26px 24px;
+  text-align: center;
+}
+.fb-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fb);
+  background: color-mix(in srgb, var(--fb) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fb) 45%, transparent);
+}
+.fb-icon {
+  font-size: 16px;
+}
+.fb-title {
+  margin: 13px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.fb-text {
+  margin: 10px 0 0;
+  /* gros et aéré : la consigne doit rester lisible sans effort */
+  font-size: 15.5px;
+  line-height: 1.6;
   color: var(--fg-dim);
 }
-.feedback-ok {
-  border-color: var(--ok);
-}
-.feedback-bad {
-  border-color: var(--bad);
-}
-.feedback-info {
-  border-color: var(--accent);
-}
-.feedback-close {
-  position: absolute;
-  right: 10px;
-  top: 8px;
-  background: none;
-  border: none;
-  color: var(--fg-faint);
-  font-size: 22px;
-  line-height: 1;
+.fb-go.btn {
+  margin-top: 20px;
+  width: 100%;
+  justify-content: center;
+  white-space: normal;
 }
 
 .hintbar {
@@ -533,4 +572,16 @@
 .switch.on span {
   left: 22px;
   background: #04222a;
+}
+
+/* Pastille cliquable : au démontage, elle retire la pièce.
+   C'est la porte de sortie quand une petite pièce (pile, processeur) est
+   difficile à viser dans la vue en cours. */
+.chip-btn {
+  cursor: pointer;
+}
+.chip-btn.got:hover {
+  background: color-mix(in srgb, var(--c) 20%, transparent);
+  border-color: var(--c);
+  color: #fff;
 }

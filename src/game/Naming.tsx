@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { COMPONENTS, type ComponentId } from '@/data/components'
+import { COMPONENTS, soloName, type ComponentId } from '@/data/components'
 import type { PartId } from '@/three/models'
 import { Showcase } from '@/three/Showcase'
 import { Btn } from '@/ui/bits'
@@ -22,14 +22,16 @@ interface NamingState {
 }
 const useNaming = create<NamingState>()(() => ({ order: [], index: 0, revealed: false }))
 
-/** Les 12 pièces du quiz (le boîtier est trop évident, on l'écarte). */
+/** Les pièces du quiz (le boîtier est trop évident, on l'écarte). */
 const POOL: PartId[] = [
   'motherboard',
   'cpu',
   'cooler',
   'ram1',
   'ssd',
+  'ssd25',
   'hdd',
+  'odd',
   'gpu',
   'psu',
   'fanFront',
@@ -71,29 +73,29 @@ export function NamingUi() {
 
   const current = order[index]
 
-  // Les 4 propositions : le bon nom + 3 leurres, mélangés
+  // Les 4 propositions : le bon nom + 3 leurres, mélangés.
+  // `soloName` sert de bonne réponse : sur le présentoir, la pièce est
+  // seule, donc « barrette 1 » ou « ventilateur avant » ne se vérifient pas.
   const choices = useMemo(() => {
     if (!current) return []
     const c = COMPONENTS[current as ComponentId]
-    return shuffle([c.name, ...c.distractors])
+    return shuffle([soloName(current as ComponentId), ...c.distractors])
   }, [current])
 
   const answer = (label: string) => {
     if (revealed || !current) return
     const c = COMPONENTS[current as ComponentId]
-    if (label === c.name) {
-      useExercise.getState().good('Exact !', c.role)
+    const good = soloName(current as ComponentId)
+    if (label === good) {
       useNaming.setState({ revealed: true })
       setWrong(null)
-      setTimeout(next, 1500)
+      useExercise.getState().good('Exact !', c.role, { part: current, onDismiss: next })
     } else {
       setWrong(label)
-      useExercise.getState().bad(
-        'Pas tout à fait…',
-        `C'est « ${c.name} ». ${c.analogy}`,
-      )
       useNaming.setState({ revealed: true })
-      setTimeout(next, 3200)
+      useExercise
+        .getState()
+        .bad('Pas tout à fait…', `C'est « ${good} ». ${c.analogy}`, { part: current, onDismiss: next })
     }
   }
 
@@ -111,7 +113,7 @@ export function NamingUi() {
     if (!current) return
     useExercise.getState().hint()
     const c = COMPONENTS[current as ComponentId]
-    useExercise.getState().info('Indice', c.analogy)
+    useExercise.getState().info('Indice', c.analogy, { part: current })
   }
 
   return (
@@ -135,7 +137,7 @@ export function NamingUi() {
           </div>
           <div className="quiz-choices">
             {choices.map((label) => {
-              const ok = label === COMPONENTS[current as ComponentId].name
+              const ok = label === soloName(current as ComponentId)
               const cls = revealed ? (ok ? 'good' : label === wrong ? 'bad' : 'dim') : ''
               return (
                 <button

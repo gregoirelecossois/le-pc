@@ -6,9 +6,10 @@
 
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
-import { COMPONENTS, INSTALLABLE_IDS, type ComponentId } from '@/data/components'
+import { COMPONENTS, INSTALLABLE_IDS, soloShortName, type ComponentId } from '@/data/components'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
+import { asPart } from '@/three/models'
 import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
@@ -24,39 +25,54 @@ export function blockers(id: ComponentId, installed: ComponentId[]): ComponentId
   return installed.filter((other) => COMPONENTS[other].requires.includes(id))
 }
 
+/**
+ * Tente de retirer une pièce.
+ *
+ * Appelé par le clic dans la 3D, mais aussi par la liste des pièces restantes :
+ * une pile CMOS ou un processeur enfoui reste ainsi accessible même quand la
+ * vue ne se prête pas au clic.
+ */
+export function removePart(id: ComponentId) {
+  if (id === 'case') return
+  const b = useBuild.getState()
+  const ex = useExercise.getState()
+  if (!b.installed.includes(id)) return
+  const stuck = blockers(id, b.installed)
+
+  if (stuck.length) {
+    const names = stuck.map((s) => soloShortName(s)).join(', ')
+    useDis.setState({ flash: Object.fromEntries(stuck.map((s) => [s, 'bad'])) })
+    ex.bad(
+      `${soloShortName(id)} est encore bloqué`,
+      `Il faut d'abord enlever : ${names}. On démonte toujours en commençant par ce qui est posé par-dessus.`,
+      { part: asPart(id), onDismiss: () => useDis.setState({ flash: {} }) },
+    )
+    return
+  }
+
+  sfx.pick()
+  ex.good(`${soloShortName(id)} retiré`, COMPONENTS[id].handling, { part: asPart(id) })
+  b.uninstall(id)
+  if (id === 'psu' || id === 'motherboard') b.set({ powered: false, running: false })
+
+  const left = useBuild.getState().installed.filter((x) => x !== 'case')
+  if (left.length === 0) useDis.setState({ finished: true })
+}
+
 /* ---------------- Scène ---------------- */
 
 export function DisassemblyScene() {
   const phase = useExercise((s) => s.phase)
   const flash = useDis((s) => s.flash)
 
-  const onPartClick = (id: ComponentId) => {
-    if (id === 'case') return
-    const b = useBuild.getState()
-    const ex = useExercise.getState()
-    const stuck = blockers(id, b.installed)
-
-    if (stuck.length) {
-      const names = stuck.map((s) => COMPONENTS[s].shortName).join(', ')
-      ex.bad(
-        `On ne peut pas retirer ${COMPONENTS[id].shortName} maintenant`,
-        `Il faut d'abord enlever : ${names}. On démonte toujours en commençant par ce qui est posé par-dessus.`,
-      )
-      useDis.setState({ flash: Object.fromEntries(stuck.map((s) => [s, 'bad'])) })
-      setTimeout(() => useDis.setState({ flash: {} }), 1500)
-      return
-    }
-
-    sfx.pick()
-    ex.good(`${COMPONENTS[id].shortName} retiré`, COMPONENTS[id].handling)
-    b.uninstall(id)
-    if (id === 'psu' || id === 'motherboard') b.set({ powered: false, running: false })
-
-    const left = useBuild.getState().installed.filter((x) => x !== 'case')
-    if (left.length === 0) useDis.setState({ finished: true })
-  }
-
-  return <PcRig interactive={phase === 'play'} highlights={flash} onPartClick={onPartClick} />
+  return (
+    <PcRig
+      interactive={phase === 'play'}
+      casePickable={false}
+      highlights={flash}
+      onPartClick={removePart}
+    />
+  )
 }
 
 /* ---------------- Interface ---------------- */
@@ -92,7 +108,9 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
     const next = removable[0]
     if (!next) return
     useExercise.getState().hint()
-    useExercise.getState().info(`Tu peux retirer : ${COMPONENTS[next].shortName}`, COMPONENTS[next].handling)
+    useExercise
+      .getState()
+      .info(`Tu peux retirer : ${soloShortName(next)}`, COMPONENTS[next].handling, { part: asPart(next) })
     useDis.setState({ flash: { [next]: 'target' } })
     setTimeout(() => useDis.setState({ flash: {} }), 1800)
   }
@@ -138,22 +156,25 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
                 .map((id) => {
                   const free = blockers(id, installed).length === 0
                   return (
-                    <span
+                    <button
                       key={id}
-                      className={`chip ${free ? 'got' : ''}`}
+                      type="button"
+                      className={`chip chip-btn ${free ? 'got' : ''}`}
                       style={{ '--c': free ? COMPONENTS[id].color : '#555' } as React.CSSProperties}
-                      title={free ? 'Peut être retirée' : 'Bloquée par une autre pièce'}
+                      title={free ? 'Cliquer pour la retirer' : 'Bloquée par une autre pièce'}
+                      onClick={() => removePart(id)}
                     >
                       <span className="chip-dot" />
-                      {COMPONENTS[id].shortName}
-                    </span>
+                      {soloShortName(id)}
+                    </button>
                   )
                 })}
             </div>
           </div>
 
           <div className="hintbar">
-            <span>🧰</span> Retire les pièces dans l'ordre inverse du montage
+            <span>🧰</span> Retire les pièces dans l'ordre inverse du montage — clique dans la machine,
+            ou sur son nom dans la liste
           </div>
         </>
       )}

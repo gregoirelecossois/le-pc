@@ -13,12 +13,24 @@ export function Home() {
   const discovered = useGame((s) => s.discovered)
   const xp = useGame((s) => s.xp)
   const [name, setName] = useState(pseudo)
+  const [newName, setNewName] = useState('')
 
   const done = CHAPTERS.filter((c) => results[c.id]?.done).length
-  const started = xp > 0 || done > 0
+  /** Vrai quand on repart de zéro pour un autre élève sur le même poste. */
+  const [asking, setAsking] = useState(false)
+  const started = (xp > 0 || done > 0) && !asking
 
   const start = () => {
     setPseudo(name.trim() || 'Élève')
+    sfx.success()
+    go('carte')
+  }
+
+  const switchUser = () => {
+    // On efface la progression : sinon le nouvel élève hériterait des
+    // chapitres, des XP et des badges du précédent.
+    useGame.getState().reset()
+    setPseudo(newName.trim() || 'Élève')
     sfx.success()
     go('carte')
   }
@@ -31,13 +43,12 @@ export function Home() {
           Le&nbsp;<span>PC</span>
         </h1>
         <p className="home-tagline">
-          Ouvre la tour, reconnais chaque composant, remets-les à leur place —
-          puis va démonter une vraie machine en classe.
+          Ouvre la tour, reconnais chaque composant, remets-les à leur place.
         </p>
 
         <ul className="home-points">
           <li>
-            <b>13</b> composants en 3D
+            <b>{COMPONENT_IDS.length}</b> composants en 3D
           </li>
           <li>
             <b>9</b> exercices progressifs
@@ -62,7 +73,7 @@ export function Home() {
                   {discovered.length}/{COMPONENT_IDS.length} fiches découvertes
                 </span>
               </div>
-              <div className="row" style={{ marginTop: 16 }}>
+              <div className="modal-actions">
                 <Btn variant="primary" size="lg" onClick={() => go('carte')}>
                   Continuer →
                 </Btn>
@@ -70,26 +81,49 @@ export function Home() {
                   Fiche de révision
                 </Btn>
               </div>
+              {/* Poste partagé : un autre élève doit pouvoir repartir de zéro
+                  sans que la progression du précédent se mélange à la sienne. */}
+              <button className="home-switch" onClick={() => setAsking(true)}>
+                👤 Ce n'est pas toi ? Changer d'utilisateur
+              </button>
             </>
           ) : (
             <>
               <label className="home-label" htmlFor="pseudo">
-                Ton prénom (il reste sur cet ordinateur)
+                {asking ? 'Le prénom du nouvel élève' : 'Ton prénom (il reste sur cet ordinateur)'}
               </label>
               <div className="row">
                 <input
                   id="pseudo"
                   className="input"
-                  value={name}
+                  value={asking ? newName : name}
                   maxLength={24}
                   placeholder="Ex. Camille"
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && start()}
+                  onChange={(e) => (asking ? setNewName : setName)(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (asking ? switchUser() : start())}
                 />
-                <Btn variant="primary" size="lg" onClick={start}>
+                <Btn variant="primary" size="lg" onClick={asking ? switchUser : start}>
                   C'est parti !
                 </Btn>
               </div>
+
+              {asking && (
+                <>
+                  <p className="home-warn">
+                    ⚠️ La progression de <b>{pseudo || 'l’élève précédent'}</b> ({done}/
+                    {CHAPTERS.length} chapitres, {xp} XP) sera effacée de cet ordinateur.
+                  </p>
+                  <button
+                    className="home-switch"
+                    onClick={() => {
+                      setNewName('')
+                      setAsking(false)
+                    }}
+                  >
+                    ← Finalement, c'est bien moi
+                  </button>
+                </>
+              )}
               <p className="home-privacy">
                 Aucune donnée n'est envoyée sur Internet : ta progression est
                 enregistrée uniquement dans ce navigateur.

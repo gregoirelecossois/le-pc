@@ -23,7 +23,7 @@ export interface Badge {
 }
 
 export const BADGES: Badge[] = [
-  { id: 'explorateur', icon: '🔭', name: 'Explorateur', how: 'Consulter les 13 fiches composants', color: '#4dd0e1' },
+  { id: 'explorateur', icon: '🔭', name: 'Explorateur', how: 'Consulter toutes les fiches composants', color: '#4dd0e1' },
   { id: 'nomenclature', icon: '🏷️', name: 'Sans hésiter', how: 'Réussir « Comment ça s\'appelle ? » sans aucune faute', color: '#ff8a3d' },
   { id: 'oeil-de-lynx', icon: '👁️', name: 'Œil de lynx', how: 'Réussir « Trouve-le dans la tour » sans aucune faute', color: '#66d17a' },
   { id: 'pedagogue', icon: '🧠', name: 'Pédagogue', how: 'Relier tous les rôles sans erreur', color: '#a78bfa' },

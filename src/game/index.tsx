@@ -16,10 +16,10 @@ export const CHAPTER_VIEW: Record<ChapterId, CameraViewId> = {
   decouverte: 'overview',
   nommer: 'showcase',
   reperer: 'exploded',
-  roles: 'overview',
+  roles: 'lineup',
   montage: 'inside',
-  cablage: 'inside',
-  peripheriques: 'rear',
+  cablage: 'cablage',
+  peripheriques: 'showcase',
   demontage: 'inside',
   defi: 'inside',
 }
@@ -29,12 +29,20 @@ export const CHAPTER_VIEW: Record<ChapterId, CameraViewId> = {
  * de l'exercice (positif = la machine se place à droite).
  */
 export const CHAPTER_OFFSET: Partial<Record<ChapterId, number>> = {
-  peripheriques: 0.13,
   cablage: 0.1,
   montage: 0.08,
   defi: 0.08,
   demontage: 0.06,
 }
+
+/**
+ * Chapitres dont le cadrage est FIXE.
+ *
+ * « À quoi ça sert ? » aligne quatre pièces devant la caméra : laisser
+ * pivoter la vue les ferait se chevaucher, et le premier clic-glissé
+ * couperait le recadrage automatique.
+ */
+export const LOCKED_VIEW: ChapterId[] = ['roles']
 
 export function GameScene({ chapter }: { chapter: ChapterId }) {
   switch (chapter) {

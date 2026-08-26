@@ -5,9 +5,10 @@
 
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
-import { COMPONENTS, type ComponentId } from '@/data/components'
+import { COMPONENTS, lowerName, sameComponent, soloName, type ComponentId } from '@/data/components'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
+import { asPart } from '@/three/models'
 import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
@@ -33,7 +34,9 @@ const POOL: ComponentId[] = [
   'cooler',
   'ram1',
   'ssd',
+  'ssd25',
   'hdd',
+  'odd',
   'gpu',
   'psu',
   'fanRear',
@@ -59,18 +62,23 @@ export function LocateScene() {
   const onPartClick = (id: ComponentId) => {
     if (locked || !target) return
     const ex = useExercise.getState()
-    if (id === target) {
+    // `sameComponent` accepte la jumelle : les deux barrettes de mémoire
+    // (comme les deux ventilateurs) sont des pièces identiques, on ne peut
+    // pas demander de les distinguer l'une de l'autre.
+    if (sameComponent(id, target)) {
       sfx.snap()
-      ex.good('Trouvé !', COMPONENTS[target].role)
-      useLocate.setState({ flash: { [target]: 'ok' }, locked: true })
-      setTimeout(next, 1400)
+      useLocate.setState({ flash: { [id]: 'ok' }, locked: true })
+      ex.good('Trouvé !', COMPONENTS[target].role, { part: asPart(target), onDismiss: next })
     } else {
-      ex.bad(
-        `Non, ça c'est ${COMPONENTS[id].name.toLowerCase()}`,
-        `Cherche plutôt : ${COMPONENTS[target].name}. ${COMPONENTS[target].analogy}`,
-      )
       useLocate.setState({ flash: { [id]: 'bad' }, locked: true })
-      setTimeout(() => useLocate.setState({ flash: {}, locked: false }), 1300)
+      ex.bad(
+        `Ça, c'est ${lowerName(id)}`,
+        `Cherche plutôt : ${soloName(target)}. ${COMPONENTS[target].analogy}`,
+        {
+          part: asPart(target),
+          onDismiss: () => useLocate.setState({ flash: {}, locked: false }),
+        },
+      )
     }
   }
 
@@ -148,7 +156,7 @@ export function LocateUi() {
           <div className="prompt card">
             <div className="prompt-label">Clique sur…</div>
             <div className="prompt-name" style={{ color: COMPONENTS[target].color }}>
-              {COMPONENTS[target].name}
+              {soloName(target)}
             </div>
             <div className="prompt-sub">
               {index + 1} / {order.length}

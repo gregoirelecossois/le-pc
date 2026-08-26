@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Stage } from './three/Stage'
 import { PcRig } from './three/PcRig'
 import { boundsCenter, SLOTS, type CameraViewId } from './three/layout'
@@ -10,7 +10,7 @@ import { BadgesScreen, ChapterMap } from './ui/ChapterMap'
 import { RevisionSheet } from './ui/RevisionSheet'
 import { Toasts } from './ui/bits'
 import { SettingsButton } from './ui/Settings'
-import { CHAPTER_OFFSET, CHAPTER_VIEW, GameScene, GameUi } from './game'
+import { CHAPTER_OFFSET, CHAPTER_VIEW, GameScene, GameUi, LOCKED_VIEW } from './game'
 import { useExercise } from './game/useExercise'
 
 // Accès aux stores depuis la console, en développement seulement.
@@ -31,7 +31,14 @@ export default function App() {
   const chapter = useGame((s) => s.chapter)
   const sound = useGame((s) => s.sound)
   const dragging = useBuild((s) => s.dragging)
-  const [view, setView] = useState<CameraViewId>('overview')
+  const handDrag = useBuild((s) => s.handDrag)
+  const [view, setViewId] = useState<CameraViewId>('overview')
+  // Compteur de demandes : recadrer sur la vue déjà active doit fonctionner.
+  const [viewSeq, setViewSeq] = useState(0)
+  const setView = useCallback((v: CameraViewId) => {
+    setViewId(v)
+    setViewSeq((n) => n + 1)
+  }, [])
 
   useEffect(() => setSoundEnabled(sound), [sound])
 
@@ -56,7 +63,10 @@ export default function App() {
       <div className="canvas-layer">
         <Stage
           view={view}
-          controlsEnabled={!dragging}
+          viewSeq={viewSeq}
+          controlsEnabled={
+            !dragging && !handDrag && !(inGame && chapter && LOCKED_VIEW.includes(chapter))
+          }
           autoRotate={screen === 'accueil'}
           frameOffset={
             screen === 'accueil' ? 0.2 : inGame && chapter ? (CHAPTER_OFFSET[chapter] ?? 0) : 0

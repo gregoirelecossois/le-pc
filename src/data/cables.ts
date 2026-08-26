@@ -4,15 +4,21 @@
  */
 
 import { MB, MB_POINTS, SLOTS } from '@/three/layout'
-import type { Vec3 } from '@/three/layout'
+import type { CameraViewId, Vec3 } from '@/three/layout'
 
 const S = MB.surfaceX
 
-/** Point de sortie du faisceau, à l'avant du bloc d'alimentation. */
+/**
+ * Point de sortie du faisceau, juste devant le bloc d'alimentation.
+ *
+ * Il est volontairement DÉGAGÉ du caisson (plus haut et plus en avant) :
+ * collé à la tôle, le repère de l'exercice de câblage disparaissait derrière
+ * l'angle du bloc dès qu'on regardait la machine de trois quarts.
+ */
 export const PSU_OUT: Vec3 = [
-  SLOTS.psu.position[0],
-  SLOTS.psu.position[1] + 1.5,
-  SLOTS.psu.position[2] - 7.6,
+  SLOTS.psu.position[0] + 1.5,
+  SLOTS.psu.position[1] + 3.5,
+  SLOTS.psu.position[2] - 9.5,
 ]
 
 export type ConnectorId =
@@ -67,6 +73,17 @@ export interface CableDef {
   wrongHint: string
   /** Ordre d'apparition dans l'exercice */
   order: number
+
+  /* ---- Guidage pas à pas (chapitre 6) ---- */
+
+  /** Ce qu'on est en train de faire, annoncé avant de cliquer */
+  what: string
+  /** Ce qu'il faut cliquer en PREMIER (l'extrémité de départ) */
+  fromHint: string
+  /** Ce qu'il faut cliquer ENSUITE (le connecteur d'arrivée) */
+  toHint: string
+  /** Cadrage de la caméra pendant cette étape */
+  view: CameraViewId
 }
 
 export const CABLES: CableDef[] = [
@@ -82,6 +99,10 @@ export const CABLES: CableDef[] = [
     recognise: "C'est le plus gros connecteur du PC : deux rangées de 12 broches, avec un clip sur le côté.",
     wrongHint: "Ce n'est pas le bon : le 24 broches va sur le grand connecteur au bord de la carte mère, à côté de la mémoire.",
     order: 1,
+    what: "On commence par le plus gros : le câble qui alimente la carte mère elle-même.",
+    fromHint: "Clique sur le faisceau qui sort du bloc d'alimentation, en bas de la machine.",
+    toHint: "Clique maintenant sur le grand connecteur 24 broches, sur le bord droit de la carte mère.",
+    view: 'cablage',
   },
   {
     id: 'eps8',
@@ -95,6 +116,10 @@ export const CABLES: CableDef[] = [
     recognise: 'Un connecteur carré de 8 broches, marqué CPU ou EPS. Il passe derrière le plateau et arrive tout en haut de la carte mère.',
     wrongHint: "Attention : ce connecteur ressemble au PCIe de la carte graphique, mais il va tout en haut, près du processeur.",
     order: 2,
+    what: "Le processeur consomme trop pour se contenter du 24 broches : il reçoit son propre câble 12 V.",
+    fromHint: "Repars du bloc d'alimentation : clique sur le faisceau.",
+    toHint: "Clique sur le connecteur 8 broches, tout en haut de la carte mère, près du ventirad.",
+    view: 'cablage',
   },
   {
     id: 'pcie8',
@@ -108,6 +133,10 @@ export const CABLES: CableDef[] = [
     recognise: 'Marqué PCI-E ou VGA. Il se branche sur le dessus de la carte graphique.',
     wrongHint: 'Le câble PCIe se branche sur la carte graphique elle-même, pas sur la carte mère.',
     order: 3,
+    what: "Même histoire pour la carte graphique : le slot PCIe ne suffit pas à l'alimenter.",
+    fromHint: "Clique une nouvelle fois sur le faisceau du bloc d'alimentation.",
+    toHint: "Clique sur la prise située SUR LE DESSUS de la carte graphique.",
+    view: 'cablage',
   },
   {
     id: 'sataPower',
@@ -121,6 +150,10 @@ export const CABLES: CableDef[] = [
     recognise: 'Un connecteur plat et large, en forme de L très aplati. Souvent plusieurs sur le même câble.',
     wrongHint: "L'alimentation SATA est plus LARGE que la prise de données. Regarde bien la taille des deux prises du disque.",
     order: 4,
+    what: "Au tour du disque dur : il lui faut d'abord du courant.",
+    fromHint: "Clique sur le faisceau du bloc d'alimentation.",
+    toHint: "Clique sur la plus LARGE des deux prises du disque dur : c'est l'alimentation SATA.",
+    view: 'cablage',
   },
   {
     id: 'sataData',
@@ -134,6 +167,10 @@ export const CABLES: CableDef[] = [
     recognise: 'Le petit câble plat, souvent rouge ou bleu, avec une prise en L de 7 broches.',
     wrongHint: 'Le câble de données part du disque et rejoint les ports SATA de la carte mère, pas le bloc d\'alimentation.',
     order: 5,
+    what: "Le courant ne suffit pas : il faut aussi une route pour les données, du disque vers la carte mère.",
+    fromHint: "Clique sur la prise étroite du disque dur, à côté de celle qu'on vient de brancher.",
+    toHint: "Clique sur les ports SATA de la carte mère, en bas à droite.",
+    view: 'cablage',
   },
   {
     id: 'frontPanel',
@@ -147,6 +184,10 @@ export const CABLES: CableDef[] = [
     recognise: 'Plusieurs petites fiches de 2 broches marquées POWER SW, HDD LED, POWER LED, RESET SW.',
     wrongHint: "C'est le câble le plus pénible à brancher : il va sur le petit connecteur JFP1, en bas de la carte mère.",
     order: 6,
+    what: "Sans ce petit câble, le bouton de démarrage de la façade ne sert à rien.",
+    fromHint: "Clique sur le faisceau qui descend de la façade du boîtier.",
+    toHint: "Clique sur le connecteur JFP1, tout en bas de la carte mère.",
+    view: 'cablage',
   },
   {
     id: 'cpuFan',
@@ -160,6 +201,10 @@ export const CABLES: CableDef[] = [
     recognise: 'Une petite fiche de 4 broches, à brancher sur le connecteur marqué CPU_FAN.',
     wrongHint: 'Le ventilateur du processeur doit aller sur CPU_FAN : la carte mère surveille sa vitesse et refuse de démarrer sans lui.',
     order: 7,
+    what: "Dernier câble : le ventilateur du processeur, que la carte mère doit pouvoir piloter.",
+    fromHint: "Clique sur le fil qui sort du ventirad.",
+    toHint: "Clique sur le connecteur CPU_FAN, juste à côté, sur la carte mère.",
+    view: 'cablage',
   },
 ]
 

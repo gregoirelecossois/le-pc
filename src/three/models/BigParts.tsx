@@ -115,31 +115,42 @@ export function Gpu({
           <meshStandardMaterial color="#1a1d23" roughness={0.5} metalness={0.3} />
         </mesh>
       ))}
-      {/* Ouvertures des ventilateurs */}
+      {/* ---- 2 ventilateurs axiaux, soufflant vers le bas (-Y) ---- */}
       {[
         [-6.2, fanA],
         [4.4, fanB],
       ].map(([z, ref], i) => (
         <group key={i} position={[0, -2.05, z as number]}>
-          <mesh>
-            <cylinderGeometry args={[4.4, 4.4, 0.25, 28]} />
-            <meshStandardMaterial color="#0b0d10" roughness={0.85} />
+          {/* Cerclage de l'ouverture : un vrai « trou » dans le carénage */}
+          <mesh castShadow receiveShadow>
+            <cylinderGeometry args={[4.5, 4.5, 1.4, 32, 1, true]} />
+            <meshStandardMaterial color="#15181d" roughness={0.6} metalness={0.3} side={THREE.DoubleSide} />
           </mesh>
+          {/* Jonc de renfort sur le bord inférieur */}
+          <mesh position={[0, -0.62, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[4.42, 0.16, 8, 44]} />
+            <meshStandardMaterial color="#0c0e11" roughness={0.7} metalness={0.4} />
+          </mesh>
+
+          {/* Rotor : moyeu + 9 pales, tourne autour de Y */}
           <group ref={ref as React.RefObject<THREE.Group>}>
-            <mesh material={M.plasticBlack()}>
-              <cylinderGeometry args={[1.35, 1.3, 0.5, 18]} />
+            <mesh castShadow>
+              <cylinderGeometry args={[1.45, 1.35, 1.0, 22]} />
+              <meshStandardMaterial color="#0f1216" roughness={0.45} metalness={0.4} />
             </mesh>
-            {Array.from({ length: 11 }).map((_, b) => {
-              const a = (b / 11) * Math.PI * 2
+            <mesh position={[0, 0.52, 0]}>
+              <cylinderGeometry args={[1.45, 1.45, 0.1, 22]} />
+              <meshStandardMaterial color="#1c2026" roughness={0.5} metalness={0.5} />
+            </mesh>
+            {Array.from({ length: 9 }).map((_, b) => {
+              const a = (b / 9) * Math.PI * 2
               return (
-                <mesh
-                  key={b}
-                  position={[Math.cos(a) * 2.85, 0, Math.sin(a) * 2.85]}
-                  rotation={[0.4, -a, 0]}
-                  material={M.fanBlade()}
-                >
-                  <boxGeometry args={[3.0, 0.1, 1.5]} />
-                </mesh>
+                <group key={b} rotation={[0, a, 0]}>
+                  {/* pale : longue sur X (radiale), inclinée pour le pas */}
+                  <mesh position={[2.75, 0, 0]} rotation={[0.5, 0, 0]} material={M.fanBlade()} castShadow>
+                    <boxGeometry args={[3.1, 0.12, 1.9]} />
+                  </mesh>
+                </group>
               )
             })}
           </group>

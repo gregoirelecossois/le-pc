@@ -89,89 +89,77 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------------- Association (chapitre 4) ---------------- */
+/* ---------------- « À quoi ça sert ? » (chapitre 4) ---------------- */
 
-.match {
+/* La consigne : c'est elle qu'on lit en premier, donc elle est grande,
+   centrée et posée sur un voile sombre pour rester lisible sur la 3D. */
+.rolequiz {
   position: absolute;
-  inset: 74px 20px 20px;
-  display: grid;
-  grid-template-columns: 250px minmax(0, 760px);
-  gap: 16px;
-  pointer-events: none;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%);
+  width: min(880px, calc(100% - 48px));
+  padding: 20px 30px 22px;
+  border-radius: var(--radius-lg);
+  background: rgba(10, 13, 19, 0.86);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  text-align: center;
 }
-/* voile sombre : le fond 3D reste visible mais ne gêne plus la lecture */
-.match::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(100deg, rgba(8, 10, 15, 0.92) 0%, rgba(8, 10, 15, 0.86) 62%, rgba(8, 10, 15, 0.35) 100%);
-  z-index: -1;
-}
-.match-col {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  overflow-y: auto;
-  pointer-events: auto;
-  padding: 2px;
-}
-.match-h {
-  font-size: 11.5px;
-  letter-spacing: 0.1em;
+.rolequiz-label {
+  font-size: 12px;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--fg-faint);
-  margin: 0 0 3px;
 }
-.match-item {
+.rolequiz-role {
+  margin: 10px 0 0;
+  font-size: clamp(19px, 2.4vw, 27px);
+  font-weight: 800;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  text-wrap: balance;
+}
+
+/* Le nom sous chaque pièce qui tourne */
+.rolechoice {
   --c: var(--accent);
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 11px 14px;
-  border-radius: 11px;
-  border: 1px solid var(--line);
-  background: rgba(16, 21, 28, 0.93);
+  min-width: 158px;
+  max-width: 210px;
+  padding: 11px 16px;
+  border-radius: 13px;
+  border: 1.5px solid var(--line-strong);
+  background: rgba(14, 18, 25, 0.94);
   color: var(--fg);
   font-family: inherit;
-  font-size: 13.5px;
-  text-align: left;
-  line-height: 1.4;
-  transition: all 0.14s ease;
-}
-.match-item:hover:not(:disabled) {
-  border-color: var(--c);
-  transform: translateX(3px);
-}
-.match-item.name {
+  font-size: 15px;
   font-weight: 700;
-  font-size: 14.5px;
+  line-height: 1.25;
+  text-align: center;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
 }
-.match-item.name em {
-  margin-left: auto;
-  font-style: normal;
-  font-size: 11px;
-  color: var(--fg-faint);
+.rolechoice:hover:not(:disabled) {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 20%, rgba(14, 18, 25, 0.94));
+  transform: translateY(-2px);
 }
-.match-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--c);
-  flex: none;
-}
-.match-item.picked {
-  border-color: var(--accent-2);
-  background: rgba(255, 209, 102, 0.15);
-  box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.28);
-}
-.match-item.done {
-  opacity: 0.42;
+.rolechoice.good {
   border-color: var(--ok);
-  background: rgba(102, 209, 122, 0.1);
+  background: rgba(102, 209, 122, 0.24);
+  color: #e2fbe7;
 }
-.match-item.wrong {
+.rolechoice.bad {
   border-color: var(--bad);
-  background: rgba(255, 107, 107, 0.16);
+  background: rgba(255, 107, 107, 0.22);
+}
+.rolechoice.dim {
+  opacity: 0.35;
+}
+.rolechoice:disabled {
+  cursor: default;
 }
 
 /* ---------------- Établi (chapitres 5 et 9) ---------------- */
@@ -409,6 +397,9 @@
 .peri-ask .faint {
   font-size: 12px;
 }
+.peri-classify {
+  margin-top: 11px;
+}
 .peri-classify > b {
   display: block;
   font-size: 14.5px;
@@ -451,4 +442,92 @@
   display: flex;
   gap: 5px;
   margin-bottom: 11px;
+}
+
+/* Fiche du câble : ce qu'on tient à la main pendant le branchement */
+.peri-plug {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  margin-bottom: 11px;
+}
+.peri-plug span {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.peri-plug b {
+  font-size: 14px;
+  color: #7dd3fc;
+}
+.peri-plug em {
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.4;
+  color: var(--fg-dim);
+}
+.peri .tray-foot .faint {
+  font-size: 11.5px;
+}
+
+/* Câblage guidé : les deux clics à faire, en toutes lettres */
+.cablesteps {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cablesteps li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  opacity: 0.55;
+  transition: all 0.18s ease;
+}
+.cablesteps li.cur {
+  opacity: 1;
+  border-color: var(--accent);
+  background: rgba(77, 208, 225, 0.1);
+}
+.cablesteps li.ok {
+  opacity: 0.8;
+  border-color: rgba(102, 209, 122, 0.4);
+}
+.cablesteps-n {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+.cablesteps li.cur .cablesteps-n {
+  background: var(--accent);
+  color: #06222a;
+}
+.cablesteps li span:last-child {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fg-dim);
+}
+.cablesteps li b {
+  display: block;
+  font-size: 12.5px;
+  color: var(--fg);
+  margin-bottom: 2px;
 }

@@ -154,9 +154,11 @@ export function Cooler({ fanSpeed = 0 }: { fanSpeed?: number }) {
         <CoolerFan speed={fanSpeed} />
       </group>
 
-      {/* Câble 4 broches vers le connecteur CPU_FAN */}
-      <mesh position={[stackCenter - 0.4, -5.6, -2.4]} rotation={[0, 0, 0.2]}>
-        <boxGeometry args={[0.28, 2.6, 0.2]} />
+      {/* Sortie du câble 4 broches : une simple gaine plaquée sous la tour.
+          Auparavant une tige rigide de 2,6 cm dépassait dans le vide ; le
+          vrai câble est tracé par l'exercice de câblage (chapitre 6). */}
+      <mesh position={[stackCenter - 0.4, -5.95, -2.4]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.16, 0.16, 1.1, 10]} />
         <meshStandardMaterial color="#0b0c0f" roughness={0.85} />
       </mesh>
     </group>
@@ -295,6 +297,12 @@ export function Ssd() {
 export function CmosBattery() {
   return (
     <group name="cmos" rotation={[0, 0, Math.PI / 2]}>
+      {/* Cible de clic élargie et invisible : la pile est petite et plate,
+          sans cela elle est presque impossible à viser dans la vue éclatée. */}
+      <mesh>
+        <sphereGeometry args={[1.7, 16, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[0.98, 0.98, 0.32, 26]} />
         <meshStandardMaterial color="#c8ccd2" metalness={1} roughness={0.22} envMapIntensity={1.5} />

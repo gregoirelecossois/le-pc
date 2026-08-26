@@ -23,10 +23,19 @@ const tmpTarget = new THREE.Vector3()
 
 function CameraRig({
   view,
+  seq,
   controls,
   enabled,
 }: {
   view: CameraViewId
+  /**
+   * Numéro de la demande de cadrage.
+   *
+   * Sans lui, redemander la vue COURANTE ne relançait rien : après avoir
+   * fait pivoter la machine à la souris, le bouton « Recadrer » restait
+   * sans effet puisque l'identifiant de vue, lui, n'avait pas changé.
+   */
+  seq: number
   controls: React.RefObject<any>
   enabled: boolean
 }) {
@@ -38,7 +47,7 @@ function CameraRig({
     goal.current.pos.set(...v.position)
     goal.current.target.set(...v.target)
     goal.current.active = true
-  }, [view])
+  }, [view, seq])
 
   useFrame((_, dt) => {
     if (!goal.current.active || !controls.current) return
@@ -173,6 +182,8 @@ function Ground({ shadows }: { shadows: boolean }) {
 export interface StageProps {
   children: ReactNode
   view?: CameraViewId
+  /** Incrémenté à chaque demande de cadrage, même vers la vue courante */
+  viewSeq?: number
   /** Bloque l'orbite pendant un glisser-déposer */
   controlsEnabled?: boolean
   /** Rotation lente automatique (écran d'accueil) */
@@ -187,6 +198,7 @@ export interface StageProps {
 export function Stage({
   children,
   view = 'overview',
+  viewSeq = 0,
   controlsEnabled = true,
   autoRotate = false,
   frameOffset = 0,
@@ -238,7 +250,7 @@ export function Stage({
         maxPolarAngle={Math.PI / 2 + 0.28}
         makeDefault
       />
-      <CameraRig view={view} controls={controls} enabled={controlsEnabled} />
+      <CameraRig view={view} seq={viewSeq} controls={controls} enabled={controlsEnabled} />
       <ViewOffset x={frameOffset} />
       {import.meta.env.DEV && <DevCapture />}
     </Canvas>
