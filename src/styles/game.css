@@ -585,3 +585,92 @@
   border-color: var(--c);
   color: #fff;
 }
+
+/* ---------------- Curseur de vue éclatée (haut, centré) ---------------- */
+
+.explodebar {
+  position: absolute;
+  left: 50%;
+  top: 74px;
+  transform: translateX(-50%);
+  width: min(430px, calc(100% - 32px));
+  padding: 11px 18px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 6;
+}
+.explodebar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--fg-dim);
+}
+.explodebar-icon {
+  font-size: 16px;
+}
+.explodebar-pct {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+/* Réglette volontairement large : c'est le geste central des ateliers,
+   et une cible de 26 px se saisit sans viser, même au pavé tactile. */
+.explodebar input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  cursor: ew-resize;
+}
+.explodebar input[type='range']::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, rgba(77, 208, 225, 0.55), rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--line);
+}
+.explodebar input[type='range']::-moz-range-track {
+  height: 10px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, rgba(77, 208, 225, 0.55), rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--line);
+}
+.explodebar input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #0d1117;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+}
+.explodebar input[type='range']::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #0d1117;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+}
+.explodebar-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+
+/* Fenêtre étroite : la réglette rejoint le bord droit plutôt que de
+   passer sous le panneau d'outils, large de 258 px à gauche. */
+@media (max-width: 1080px) {
+  .explodebar {
+    left: auto;
+    right: 16px;
+    transform: none;
+    width: min(340px, calc(100% - 300px));
+  }
+}

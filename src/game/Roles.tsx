@@ -24,10 +24,16 @@ import { sfx } from '@/audio/sfx'
 /** Rôles reformulés en une phrase courte, pensée pour être lue en grand. */
 const PAIRS: { id: ComponentId; role: string }[] = [
   { id: 'cpu', role: "Il exécute les calculs : c'est le cerveau de la machine." },
-  { id: 'ram1', role: "Elle garde sous la main ce qui sert MAINTENANT, et s'efface à l'extinction." },
+  {
+    id: 'ram1',
+    role: "C'est la mémoire qui garde sous la main ce qui sert MAINTENANT, et s'efface à l'extinction du PC.",
+  },
   { id: 'ssd', role: 'Il conserve les fichiers même éteint, et démarre le système très vite.' },
   { id: 'hdd', role: 'Il stocke beaucoup de données pour pas cher, avec des plateaux qui tournent.' },
-  { id: 'ssd25', role: 'Il stocke sans pièce mobile, dans un boîtier plat relié par deux câbles.' },
+  {
+    id: 'ssd25',
+    role: 'Un disque qui stocke les données, sans pièce mobile, dans un boîtier plat relié par deux câbles.',
+  },
   { id: 'odd', role: 'Il lit les CD et les DVD avec un rayon laser.' },
   { id: 'motherboard', role: 'Elle relie tous les composants entre eux et leur distribue le courant.' },
   { id: 'psu', role: 'Il transforme le 230 V de la prise murale en courants utilisables.' },

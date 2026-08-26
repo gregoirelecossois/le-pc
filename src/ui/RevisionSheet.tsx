@@ -1,264 +1,252 @@
 /**
- * Fiche de révision imprimable.
- * C'est le document que l'élève garde — et celui qu'on emmène
- * devant la vraie unité centrale en classe.
+ * La leçon à emporter.
+ *
+ * Elle ne s'ouvre qu'une fois les neuf ateliers terminés : c'est la
+ * récompense du parcours, et son contenu n'a de sens qu'après l'avoir
+ * vécu. À l'écran, l'élève la relit ; le bouton en haut lui fabrique le
+ * PDF à conserver (les postes de la salle n'ont pas d'imprimante).
  */
 
+import { useState } from 'react'
 import { BADGES } from '@/data/badges'
-import { CABLES } from '@/data/cables'
 import { CHAPTERS } from '@/data/chapters'
 import {
   CATEGORY_LABEL,
   COMPONENTS,
-  DISASSEMBLY_IDS,
-  INSTALLABLE_IDS,
   COMPONENT_IDS,
 } from '@/data/components'
 import { KIND_LABEL, PERIPHERALS } from '@/data/peripherals'
 import { useGame, useLevel } from '@/state/useGame'
+import { ThumbnailStudio, useThumbShots } from '@/three/Thumbnails'
 import { Btn, Stars } from './bits'
+import { downloadPdf } from './pdf'
+import { buildRevisionPdf, ink, sheetShotQueue, shotOf } from './sheetPdf'
+
+const QUEUE = sheetShotQueue()
+
+/** Tous les ateliers sont-ils terminés ? */
+export function sheetUnlocked(results: ReturnType<typeof useGame.getState>['results']) {
+  return CHAPTERS.every((c) => results[c.id]?.done)
+}
 
 export function RevisionSheet() {
   const go = useGame((s) => s.go)
   const pseudo = useGame((s) => s.pseudo)
   const badges = useGame((s) => s.badges)
   const results = useGame((s) => s.results)
-  const discovered = useGame((s) => s.discovered)
+  const xp = useGame((s) => s.xp)
   const lvl = useLevel()
+  const { shots, done, total, ready } = useThumbShots()
+  const [saved, setSaved] = useState(false)
 
-  const today = new Date().toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  const unlocked = sheetUnlocked(results)
+
+  /* ---- Verrou : la fiche récapitule ce que l'élève a fait ---- */
+
+  if (!unlocked) {
+    const left = CHAPTERS.filter((c) => !results[c.id]?.done)
+    return (
+      <div className="sheet-screen">
+        <div className="sheet-bar">
+          <Btn variant="ghost" onClick={() => go('carte')}>
+            ← Retour au parcours
+          </Btn>
+        </div>
+        <div className="sheet-locked card">
+          <div className="sheet-locked-icon">🔒</div>
+          <h2>Ta fiche de révision n'est pas encore prête</h2>
+          <p>
+            Elle se débloque quand les <b>{CHAPTERS.length} ateliers</b> sont terminés. C'est
+            elle qui rassemble tout ce que tu auras appris, en deux leçons illustrées.
+          </p>
+          <div className="sheet-locked-list">
+            {left.map((c) => (
+              <span key={c.id} className="pill" style={{ borderColor: c.color, color: c.color }}>
+                {c.n}. {c.title}
+              </span>
+            ))}
+          </div>
+          <p className="faint">
+            Encore {left.length} atelier{left.length > 1 ? 's' : ''} à terminer.
+          </p>
+          <Btn variant="primary" size="lg" onClick={() => go('carte')}>
+            Continuer le parcours →
+          </Btn>
+        </div>
+      </div>
+    )
+  }
+
+  /* ---- La leçon ---- */
+
+  const save = () => {
+    const blob = buildRevisionPdf({
+      pseudo,
+      xp,
+      results,
+      badgeCount: badges.length,
+      badgeTotal: BADGES.length,
+      levelTitle: lvl.title,
+      shots,
+    })
+    const who = pseudo ? '-' + pseudo.normalize('NFD').replace(/[^a-zA-Z0-9]/g, '') : ''
+    downloadPdf(blob, `lecon-le-pc${who}.pdf`)
+    setSaved(true)
+  }
 
   return (
     <div className="sheet-screen">
-      <div className="sheet-bar no-print">
+      {/* Le studio photo : il tourne le temps de saisir les modèles 3D. */}
+      <ThumbnailStudio queue={QUEUE} />
+
+      <div className="sheet-bar">
         <Btn variant="ghost" onClick={() => go('carte')}>
           ← Retour au parcours
         </Btn>
         <div className="spacer" />
-        <Btn variant="primary" onClick={() => window.print()}>
-          🖨️ Imprimer la fiche
+        {!ready && (
+          <span className="faint sheet-prep">
+            Préparation des images… {done} / {total}
+          </span>
+        )}
+        <Btn variant="primary" disabled={!ready} onClick={save}>
+          {saved ? '✅ PDF enregistré' : '📄 Télécharger la leçon (PDF)'}
         </Btn>
       </div>
 
       <div className="sheet scroll">
-        <header className="sheet-head">
-          <div>
-            <h1>Fiche de révision — L'unité centrale</h1>
-            <p className="sheet-sub">
-              Les composants d'un ordinateur de bureau, leur place et leur rôle
-            </p>
-          </div>
-          <div className="sheet-id">
-            <div>
-              <b>Nom :</b> {pseudo || '.'.repeat(24)}
-            </div>
-            <div>
-              <b>Date :</b> {today}
-            </div>
-            <div>
-              <b>Niveau :</b> {lvl.icon} {lvl.title}
-            </div>
-          </div>
+        <header className="lesson-head">
+          <h1>Les composants et les périphériques du PC</h1>
+          <p>{pseudo ? `Fiche de révision de ${pseudo}` : 'Fiche de révision'} · Technologie</p>
         </header>
 
-        {/* ------------------------------------------------ */}
-        <section>
-          <h2>1. Les composants de l'unité centrale</h2>
-          <table className="sheet-table">
-            <thead>
-              <tr>
-                <th>Composant</th>
-                <th>Famille</th>
-                <th>À quoi ça sert</th>
-                <th>Où c'est placé</th>
-              </tr>
-            </thead>
-            <tbody>
-              {COMPONENT_IDS.map((id) => {
-                const c = COMPONENTS[id]
-                return (
-                  <tr key={id}>
-                    <td>
-                      <b>{c.shortName}</b>
-                      {c.acronym && <span className="sheet-acr"> ({c.acronym})</span>}
-                    </td>
-                    <td className="sheet-cat">{CATEGORY_LABEL[c.category]}</td>
-                    <td>{c.role}</td>
-                    <td className="sheet-small">{c.analogy}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </section>
+        {/* ---------------- Leçon 1 ---------------- */}
 
-        {/* ------------------------------------------------ */}
-        <section>
-          <h2>2. L'ordre de montage (et l'ordre inverse pour démonter)</h2>
-          <div className="sheet-cols">
-            <div>
-              <h3>Montage</h3>
-              <ol className="sheet-ol">
-                {INSTALLABLE_IDS.map((id) => (
-                  <li key={id}>{COMPONENTS[id].shortName}</li>
-                ))}
-              </ol>
-            </div>
-            <div>
-              <h3>Démontage</h3>
-              <ol className="sheet-ol">
-                {DISASSEMBLY_IDS.map((id) => (
-                  <li key={id}>{COMPONENTS[id].shortName}</li>
-                ))}
-              </ol>
-            </div>
-          </div>
-          <p className="sheet-note">
-            <b>Règle d'or :</b> on ne retire jamais une pièce qui en soutient une
-            autre. Le ventirad avant le processeur, la carte graphique avant la
-            carte mère.
-          </p>
-        </section>
+        <div className="lesson-banner l1">Leçon 1 — Les composants du PC</div>
+        <p className="lesson-intro">
+          L'unité centrale est la « tour » de l'ordinateur. À l'intérieur, chaque pièce a un
+          rôle précis : voici comment les reconnaître et à quoi chacune sert.
+        </p>
 
-        {/* ------------------------------------------------ */}
-        <section>
-          <h2>3. Les câbles internes</h2>
-          <table className="sheet-table">
-            <thead>
-              <tr>
-                <th>Câble</th>
-                <th>De … vers …</th>
-                <th>Comment le reconnaître</th>
-              </tr>
-            </thead>
-            <tbody>
-              {CABLES.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <b>{c.name}</b>
-                  </td>
-                  <td className="sheet-small">
-                    {c.fromLabel} → {c.to === 'sataMb' ? 'Carte mère (SATA)' : c.to === 'pcie8' ? 'Carte graphique' : c.to === 'sataPower' ? 'Disque dur' : 'Carte mère'}
-                  </td>
-                  <td className="sheet-small">{c.recognise}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <div className="lesson-cards">
+          {COMPONENT_IDS.map((id) => {
+            const c = COMPONENTS[id]
+            const img = shots[shotOf(id)]
+            return (
+              <article
+                key={id}
+                className="lcard"
+                // Les couleurs vives du jeu sont pensées sur fond noir : sur
+                // la feuille blanche, on prend les mêmes que le PDF.
+                style={{ '--c': ink(c.color) } as React.CSSProperties}
+              >
+                <div className="lcard-img">
+                  {img ? <img src={img.url} alt="" /> : <span className="lcard-wait" />}
+                </div>
+                <div className="lcard-body">
+                  <div className="lcard-top">
+                    <h3>
+                      {c.shortName}
+                      {c.acronym && <em> ({c.acronym})</em>}
+                    </h3>
+                    <span className="lcard-chip">{CATEGORY_LABEL[c.category]}</span>
+                  </div>
+                  <p className="lcard-role">{c.role}</p>
+                  <p className="lcard-memo">
+                    <b>À retenir :</b> {c.analogy}
+                  </p>
+                </div>
+              </article>
+            )
+          })}
+        </div>
 
-        {/* ------------------------------------------------ */}
-        <section>
-          <h2>4. Les périphériques</h2>
-          <p className="sheet-note">
-            Un périphérique d'<b>entrée</b> envoie de l'information à
-            l'ordinateur. Un périphérique de <b>sortie</b> en reçoit pour te la
-            restituer. Certains font les deux.
-          </p>
-          <table className="sheet-table">
-            <thead>
-              <tr>
-                <th>Périphérique</th>
-                <th>Type</th>
-                <th>Sa fiche</th>
-                <th>Où le brancher</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PERIPHERALS.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    {p.icon} <b>{p.name}</b>
-                  </td>
-                  <td className="sheet-cat">{KIND_LABEL[p.kind]}</td>
-                  <td className="sheet-small">{p.plugName}</td>
-                  <td className="sheet-small">{p.hint}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        {/* ---------------- Leçon 2 ---------------- */}
 
-        {/* ------------------------------------------------ */}
-        <section>
-          <h2>5. Les gestes de sécurité</h2>
-          <ul className="sheet-ul">
-            <li>
-              <b>Débrancher la prise murale</b> et appuyer 5 secondes sur le
-              bouton de démarrage pour vider les condensateurs.
-            </li>
-            <li>
-              <b>Se décharger de l'électricité statique</b> en touchant le métal
-              du boîtier avant de toucher un composant.
-            </li>
-            <li>
-              <b>Ne jamais ouvrir le bloc d'alimentation</b>, même débranché.
-            </li>
-            <li>
-              <b>Tenir les cartes par les bords</b>, jamais par les circuits ni
-              par les contacts dorés.
-            </li>
-            <li>
-              <b>Ne jamais forcer.</b> Si ça ne rentre pas, c'est que ce n'est
-              pas dans le bon sens : cherche le détrompeur.
-            </li>
-            <li>
-              <b>Ranger les vis</b> dans une coupelle, en les regroupant par
-              taille.
-            </li>
-          </ul>
-        </section>
+        <div className="lesson-banner l2">Leçon 2 — Les périphériques principaux du PC</div>
+        <p className="lesson-intro">
+          Un périphérique est un appareil branché AUTOUR de l'unité centrale. Il est
+          d'<b>entrée</b> quand il envoie de l'information à l'ordinateur, de <b>sortie</b>{' '}
+          quand il en reçoit pour te la restituer, et parfois les deux à la fois.
+        </p>
 
-        {/* ------------------------------------------------ */}
-        <section className="sheet-progress">
-          <h2>6. Ma progression</h2>
-          <div className="sheet-cols">
-            <div>
-              <h3>Chapitres</h3>
-              <ul className="sheet-ul sheet-tight">
-                {CHAPTERS.map((c) => {
-                  const r = results[c.id]
-                  return (
-                    <li key={c.id}>
-                      {c.n}. {c.title} —{' '}
-                      {r?.done ? (
-                        <>
-                          <Stars n={r.stars} size={13} />
-                        </>
-                      ) : (
-                        <span className="faint">non fait</span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-            <div>
-              <h3>
-                Badges ({badges.length}/{BADGES.length})
-              </h3>
-              <div className="sheet-badges">
-                {BADGES.filter((b) => badges.includes(b.id)).map((b) => (
-                  <span key={b.id} className="sheet-badge">
-                    {b.icon} {b.name}
+        <div className="lesson-cards">
+          {PERIPHERALS.map((p) => {
+            const img = shots[`peri:${p.id}`]
+            return (
+              <article key={p.id} className={`lcard k-${p.kind}`}>
+                <div className="lcard-img">
+                  {img ? <img src={img.url} alt="" /> : <span className="lcard-wait" />}
+                </div>
+                <div className="lcard-body">
+                  <div className="lcard-top">
+                    <h3>{p.name}</h3>
+                    <span className="lcard-chip">{KIND_LABEL[p.kind]}</span>
+                  </div>
+                  <p className="lcard-role">{p.role}</p>
+                  <p className="lcard-memo">
+                    <b>Sa fiche :</b> {p.plugName}. {p.plugHint}
+                  </p>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+
+        {/* ---------------- Progression ---------------- */}
+
+        <div className="lesson-banner l3">Ma progression</div>
+        <div className="lesson-prog">
+          <div>
+            <h3>Les ateliers</h3>
+            <ul>
+              {CHAPTERS.map((c) => (
+                <li key={c.id}>
+                  <span>
+                    {c.n}. {c.title}
                   </span>
-                ))}
-                {badges.length === 0 && <span className="faint">Aucun badge pour l'instant.</span>}
-              </div>
-              <p className="sheet-note" style={{ marginTop: 12 }}>
-                Fiches consultées : {discovered.length} / {COMPONENT_IDS.length}
-              </p>
-            </div>
+                  <Stars n={results[c.id]?.stars ?? 0} size={13} />
+                </li>
+              ))}
+            </ul>
           </div>
-        </section>
+          <div>
+            <h3>Mon bilan</h3>
+            <ul>
+              <li>
+                <span>Niveau atteint</span>
+                <b>{lvl.title}</b>
+              </li>
+              <li>
+                <span>Expérience</span>
+                <b>{xp} XP</b>
+              </li>
+              <li>
+                <span>Badges décrochés</span>
+                <b>
+                  {badges.length} / {BADGES.length}
+                </b>
+              </li>
+              <li>
+                <span>Composants étudiés</span>
+                <b>{COMPONENT_IDS.length}</b>
+              </li>
+              <li>
+                <span>Périphériques étudiés</span>
+                <b>{PERIPHERALS.length}</b>
+              </li>
+            </ul>
+          </div>
+        </div>
 
-        <footer className="sheet-foot">
-          Le PC — jeu d'apprentissage du matériel informatique · Technologie, cycle 4
-        </footer>
+        <div className="lesson-safety">
+          <b>À retenir avant de démonter une vraie machine</b>
+          <p>
+            On débranche la prise murale, on se décharge de l'électricité statique en touchant
+            le métal du boîtier, on tient les cartes par les bords, et on ne force jamais : si
+            ça ne rentre pas, c'est que ce n'est pas dans le bon sens.
+          </p>
+        </div>
       </div>
     </div>
   )

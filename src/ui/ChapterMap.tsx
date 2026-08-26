@@ -2,6 +2,7 @@ import { BADGES } from '@/data/badges'
 import { CHAPTERS } from '@/data/chapters'
 import { isUnlocked, useGame } from '@/state/useGame'
 import { Btn, Stars, XpBar } from './bits'
+import { sheetUnlocked } from './RevisionSheet'
 import { sfx } from '@/audio/sfx'
 
 export function ChapterMap() {
@@ -12,6 +13,8 @@ export function ChapterMap() {
   const pseudo = useGame((s) => s.pseudo)
 
   const doneCount = CHAPTERS.filter((c) => results[c.id]?.done).length
+  // La fiche récapitule le parcours : elle n'a de sens qu'à la fin.
+  const ficheOk = sheetUnlocked(results)
 
   return (
     <div className="map fade-up">
@@ -70,8 +73,17 @@ export function ChapterMap() {
         <Btn variant="ghost" onClick={() => go('badges')}>
           🏅 Badges ({badges.length}/{BADGES.length})
         </Btn>
-        <Btn variant="ghost" onClick={() => go('fiche')}>
-          📄 Fiche de révision
+        <Btn
+          variant="ghost"
+          disabled={!ficheOk}
+          title={
+            ficheOk
+              ? 'Ta leçon illustrée, à emporter'
+              : `Termine les ${CHAPTERS.length} ateliers pour débloquer ta fiche`
+          }
+          onClick={() => go('fiche')}
+        >
+          {ficheOk ? '📄' : '🔒'} Fiche de révision
         </Btn>
         <div className="spacer" />
         <Btn variant="ghost" size="sm" onClick={() => go('accueil')}>

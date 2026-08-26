@@ -13,8 +13,8 @@ import * as THREE from 'three'
 import {
   COMPONENTS,
   INSTALLABLE_IDS,
-  soloName,
-  soloShortName,
+  placedName,
+  placedShortName,
   type ComponentId,
 } from '@/data/components'
 import { boundsCenter, BOUNDS, SLOTS } from '@/three/layout'
@@ -210,11 +210,11 @@ export function AssemblyUi({
       b.install(id)
       setFlash(id)
       setTimeout(() => setFlash(null), 900)
-      ex.good(`${soloShortName(id)} en place !`, c.handling, { part: id })
+      ex.good(`${placedShortName(id)} en place !`, c.handling, { part: id })
     } else {
       ex.bad(
-        `Ce n'est pas la place de « ${soloShortName(id)} »`,
-        `Ici, c'est l'emplacement de : ${soloName(cand)}.`,
+        `Ce n'est pas la place de « ${placedShortName(id)} »`,
+        `Ici, c'est l'emplacement de : ${placedName(cand)}.`,
         { part: id },
       )
     }
@@ -242,7 +242,7 @@ export function AssemblyUi({
     if (!next) return
     useExercise.getState().hint()
     const c = COMPONENTS[next]
-    useExercise.getState().info(`Prochaine pièce : ${soloShortName(next)}`, c.handling, { part: asPart(next) })
+    useExercise.getState().info(`Prochaine pièce : ${placedShortName(next)}`, c.handling, { part: asPart(next) })
   }
 
   return (
@@ -315,7 +315,7 @@ export function AssemblyUi({
                     }}
                   >
                     <span className="traycard-bar" />
-                    <span className="traycard-name">{soloShortName(id)}</span>
+                    <span className="traycard-name">{placedShortName(id)}</span>
                     {c.acronym && <em>{c.acronym}</em>}
                     {lock && <span className="traycard-lock">🔒</span>}
                   </button>
@@ -336,12 +336,12 @@ export function AssemblyUi({
 
           {dragging && (
             <div className="dragbar">
-              Relâche sur l'emplacement qui convient à «&nbsp;{soloShortName(dragging)}&nbsp;»
+              Relâche sur l'emplacement qui convient à «&nbsp;{placedShortName(dragging)}&nbsp;»
             </div>
           )}
 
           {!dragging && flash && (
-            <div className="okflash">✅ {soloShortName(flash)}</div>
+            <div className="okflash">✅ {placedShortName(flash)}</div>
           )}
 
           {!dragging && !flash && tray.length > 0 && (

@@ -836,3 +836,86 @@ button {
   color: var(--fg-faint);
   line-height: 1.4;
 }
+
+/* ---------------- Accès enseignant ---------------- */
+
+/* Volontairement effacé : présent pour qui le cherche, invisible pour la
+   classe. Cible tout de même assez grande pour un clic au pavé tactile. */
+.devdot {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg-faint);
+  opacity: 0.28;
+  font-size: 20px;
+  line-height: 1;
+  transition: opacity 0.2s;
+}
+.devdot:hover {
+  opacity: 0.9;
+}
+
+.devfab {
+  position: absolute;
+  right: 16px;
+  bottom: 66px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  color: var(--fg-dim);
+  font-size: 19px;
+  z-index: 70;
+  box-shadow: var(--shadow-sm);
+}
+
+.devgrid-label {
+  margin: 16px 0 7px;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.devgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.devjump {
+  --c: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg);
+  font-size: 13px;
+}
+.devjump:hover {
+  border-color: var(--c);
+}
+.devjump.cur {
+  border-color: var(--c);
+  box-shadow: inset 0 0 0 1px var(--c);
+}
+.devjump-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #0a0c11;
+  font-size: 11.5px;
+  font-weight: 800;
+}

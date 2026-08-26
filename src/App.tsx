@@ -10,6 +10,7 @@ import { BadgesScreen, ChapterMap } from './ui/ChapterMap'
 import { RevisionSheet } from './ui/RevisionSheet'
 import { Toasts } from './ui/bits'
 import { SettingsButton } from './ui/Settings'
+import { DevPanel } from './ui/DevKit'
 import { CHAPTER_OFFSET, CHAPTER_VIEW, GameScene, GameUi, LOCKED_VIEW } from './game'
 import { useExercise } from './game/useExercise'
 
@@ -88,6 +89,7 @@ export default function App() {
       </div>
 
       <SettingsButton />
+      <DevPanel />
       <Toasts />
     </div>
   )

@@ -3,6 +3,8 @@ import { CHAPTERS } from '@/data/chapters'
 import { COMPONENT_IDS } from '@/data/components'
 import { useGame } from '@/state/useGame'
 import { Btn, XpBar } from './bits'
+import { sheetUnlocked } from './RevisionSheet'
+import { DevUnlock } from './DevKit'
 import { sfx } from '@/audio/sfx'
 
 export function Home() {
@@ -16,6 +18,7 @@ export function Home() {
   const [newName, setNewName] = useState('')
 
   const done = CHAPTERS.filter((c) => results[c.id]?.done).length
+  const ficheOk = sheetUnlocked(results)
   /** Vrai quand on repart de zéro pour un autre élève sur le même poste. */
   const [asking, setAsking] = useState(false)
   const started = (xp > 0 || done > 0) && !asking
@@ -77,8 +80,17 @@ export function Home() {
                 <Btn variant="primary" size="lg" onClick={() => go('carte')}>
                   Continuer →
                 </Btn>
-                <Btn variant="ghost" onClick={() => go('fiche')}>
-                  Fiche de révision
+                <Btn
+                  variant="ghost"
+                  disabled={!ficheOk}
+                  title={
+                    ficheOk
+                      ? 'Ta leçon illustrée, à emporter'
+                      : `Termine les ${CHAPTERS.length} ateliers pour débloquer ta fiche`
+                  }
+                  onClick={() => go('fiche')}
+                >
+                  {ficheOk ? '📄' : '🔒'} Fiche de révision
                 </Btn>
               </div>
               {/* Poste partagé : un autre élève doit pouvoir repartir de zéro
@@ -132,6 +144,8 @@ export function Home() {
           )}
         </div>
       </div>
+
+      <DevUnlock />
 
       <div className="home-hint">
         <span>🖱️</span> Fais tourner la machine : clic gauche pour pivoter, molette pour zoomer

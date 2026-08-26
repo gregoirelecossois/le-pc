@@ -29,6 +29,37 @@ function RearPort({ port, local = true }: { port: Port; local?: boolean }) {
   const p: Vec3 = local ? [lx(wx), ly(wy), lz(wz)] : [wx, wy, wz]
   const [sx, sy, sz] = port.size
 
+  /**
+   * Les prises audio sont RONDES.
+   *
+   * C'est ce qui permet de les reconnaître d'un coup d'œil sur une vraie
+   * machine, avant même de lire la couleur : un trou rond entouré d'une
+   * couronne verte, rose ou bleue. Dessinées comme les autres — un
+   * rectangle avec une pastille — elles ne ressemblaient à rien de connu.
+   */
+  if (port.kind === 'jack') {
+    const r = Math.min(sx, sy) / 2
+    return (
+      <group position={p}>
+        {/* Fût métallique traversant la plaque */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[r, r, sz, 20]} />
+          <meshStandardMaterial color="#9aa1ab" metalness={1} roughness={0.42} />
+        </mesh>
+        {/* Couronne colorée : vert = sortie, rose = micro, bleu = entrée ligne */}
+        <mesh position={[0, 0, sz / 2 + 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[r * 0.94, r * 0.94, 0.08, 20]} />
+          <meshStandardMaterial color={port.color} roughness={0.5} />
+        </mesh>
+        {/* Le trou où entre la fiche */}
+        <mesh position={[0, 0, sz / 2 + 0.07]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[r * 0.44, r * 0.44, 0.1, 16]} />
+          <meshStandardMaterial color="#05070a" roughness={0.95} />
+        </mesh>
+      </group>
+    )
+  }
+
   return (
     <group position={p}>
       {/* Corps métallique de la prise */}
@@ -41,19 +72,12 @@ function RearPort({ port, local = true }: { port: Port; local?: boolean }) {
         <boxGeometry args={[sx * 0.82, sy * 0.66, 0.06]} />
         <meshStandardMaterial color={port.color} roughness={0.9} />
       </mesh>
-      {/* Languette intérieure colorée (USB bleu, RJ45 jaune, jack couleur) */}
-      {port.kind === 'jack' ? (
-        <mesh position={[0, 0, sz / 2 + 0.02]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[sy * 0.34, sy * 0.34, 0.08, 14]} />
-          <meshStandardMaterial color={port.color} roughness={0.55} />
+      {/* Languette intérieure colorée (USB bleu, RJ45 jaune) */}
+      {port.inner && (
+        <mesh position={[0, -sy * 0.12, sz / 2 + 0.03]}>
+          <boxGeometry args={[sx * 0.68, sy * 0.22, 0.05]} />
+          <meshStandardMaterial color={port.inner} roughness={0.6} />
         </mesh>
-      ) : (
-        port.inner && (
-          <mesh position={[0, -sy * 0.12, sz / 2 + 0.03]}>
-            <boxGeometry args={[sx * 0.68, sy * 0.22, 0.05]} />
-            <meshStandardMaterial color={port.inner} roughness={0.6} />
-          </mesh>
-        )
       )}
     </group>
   )

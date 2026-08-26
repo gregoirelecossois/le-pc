@@ -15,7 +15,7 @@ import { RolesScene, RolesUi } from './Roles'
 export const CHAPTER_VIEW: Record<ChapterId, CameraViewId> = {
   decouverte: 'overview',
   nommer: 'showcase',
-  reperer: 'exploded',
+  reperer: 'overview',
   roles: 'lineup',
   montage: 'inside',
   cablage: 'cablage',

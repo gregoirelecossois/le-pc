@@ -6,11 +6,11 @@
 
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
-import { COMPONENTS, INSTALLABLE_IDS, soloShortName, type ComponentId } from '@/data/components'
+import { COMPONENTS, INSTALLABLE_IDS, placedShortName, type ComponentId } from '@/data/components'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
 import { asPart } from '@/three/models'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, Feedback, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -40,10 +40,10 @@ export function removePart(id: ComponentId) {
   const stuck = blockers(id, b.installed)
 
   if (stuck.length) {
-    const names = stuck.map((s) => soloShortName(s)).join(', ')
+    const names = stuck.map((s) => placedShortName(s)).join(', ')
     useDis.setState({ flash: Object.fromEntries(stuck.map((s) => [s, 'bad'])) })
     ex.bad(
-      `${soloShortName(id)} est encore bloqué`,
+      `On ne peut pas encore retirer « ${placedShortName(id)} »`,
       `Il faut d'abord enlever : ${names}. On démonte toujours en commençant par ce qui est posé par-dessus.`,
       { part: asPart(id), onDismiss: () => useDis.setState({ flash: {} }) },
     )
@@ -51,7 +51,7 @@ export function removePart(id: ComponentId) {
   }
 
   sfx.pick()
-  ex.good(`${soloShortName(id)} retiré`, COMPONENTS[id].handling, { part: asPart(id) })
+  ex.good(`${placedShortName(id)} retiré`, COMPONENTS[id].handling, { part: asPart(id) })
   b.uninstall(id)
   if (id === 'psu' || id === 'motherboard') b.set({ powered: false, running: false })
 
@@ -80,8 +80,6 @@ export function DisassemblyScene() {
 export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') => void }) {
   const ex = useExercise()
   const installed = useBuild((s) => s.installed)
-  const explode = useBuild((s) => s.explode)
-  const setBuild = useBuild((s) => s.set)
   const finished = useDis((s) => s.finished)
   const [result, setResult] = useState<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
   const ready = useReady()
@@ -110,7 +108,7 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
     useExercise.getState().hint()
     useExercise
       .getState()
-      .info(`Tu peux retirer : ${soloShortName(next)}`, COMPONENTS[next].handling, { part: asPart(next) })
+      .info(`Tu peux retirer : ${placedShortName(next)}`, COMPONENTS[next].handling, { part: asPart(next) })
     useDis.setState({ flash: { [next]: 'target' } })
     setTimeout(() => useDis.setState({ flash: {} }), 1800)
   }
@@ -134,19 +132,9 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
 
       {ex.phase === 'play' && (
         <>
+          <ExplodeSlider />
+
           <div className="tools card tools-thin">
-            <label className="tools-row">
-              <span>Vue éclatée</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={explode}
-                onChange={(e) => setBuild({ explode: +e.target.value })}
-              />
-            </label>
-            <div className="tools-sep" />
             <div className="tools-legend">
               Reste : <b>{installed.filter((x) => x !== 'case').length}</b> pièce(s)
             </div>
@@ -165,7 +153,7 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
                       onClick={() => removePart(id)}
                     >
                       <span className="chip-dot" />
-                      {soloShortName(id)}
+                      {placedShortName(id)}
                     </button>
                   )
                 })}

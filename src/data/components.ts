@@ -350,9 +350,13 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
       'On enlève d\'abord les caches à l\'arrière du boîtier. Pour la retirer, il faut PENSER à pousser le petit clip au bout du slot.',
     funFact:
       'Une carte graphique de PC de bureau contient souvent plus de 4 000 mini-processeurs travaillant en même temps.',
-    installOrder: 11,
-    requires: ['motherboard'],
-    requiresHint: 'La carte graphique se clipse dans le slot PCIe : installe la carte mère d\'abord.',
+    installOrder: 12,
+    // La pile est un vrai prérequis physique : sur la plupart des cartes
+    // mères, son support se trouve JUSTE SOUS la carte graphique. Une fois
+    // la carte posée, on ne peut plus l'atteindre sans la redémonter.
+    requires: ['motherboard', 'cmos'],
+    requiresHint:
+      "La carte graphique vient se clipser juste au-dessus du support de la pile CMOS, et le recouvre. Pose d'abord la carte mère ET la pile : après, la pile n'est plus accessible.",
     distractors: ['La carte mère', 'La carte réseau', 'Le processeur'],
     color: '#66d17a',
   },
@@ -372,7 +376,7 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     handling:
       'Pour le nettoyer, on bloque les pales avec le doigt avant de souffler, sinon il produit du courant et peut abîmer la carte mère.',
     funFact: 'Un ventilateur de 120 mm déplace environ 90 m³ d\'air par heure, soit le volume d\'une petite chambre.',
-    installOrder: 12,
+    installOrder: 13,
     requires: ['case'],
     distractors: ['Le ventirad', "Le ventilateur de l'alimentation", 'Le radiateur'],
     color: '#7dd3fc',
@@ -392,7 +396,7 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     ],
     handling: 'On vérifie toujours le sens des flèches sur le cadre avant de visser.',
     funFact: 'Un PC bien ventilé tourne 10 à 15 °C plus frais, ce qui augmente sa durée de vie de plusieurs années.',
-    installOrder: 13,
+    installOrder: 14,
     requires: ['case'],
     distractors: ['Le ventirad', 'Le ventilateur avant', "Le bloc d'alimentation"],
     color: '#7dd3fc',
@@ -413,9 +417,10 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     handling: 'On la retire en poussant le petit clip métallique sur le côté ; elle se soulève toute seule.',
     funFact:
       'C\'est le composant le moins cher du PC (moins d\'un euro) mais son absence empêche parfois la machine de démarrer.',
-    installOrder: 14,
+    installOrder: 11,
     requires: ['motherboard'],
-    requiresHint: 'La pile se loge dans son support sur la carte mère.',
+    requiresHint:
+      "La pile se loge dans son support sur la carte mère. On la met en place AVANT la carte graphique, qui viendra la recouvrir.",
     distractors: ["Le bloc d'alimentation", 'Le chipset', 'Le buzzer'],
     color: '#ffd166',
   },
@@ -467,6 +472,24 @@ export function soloName(id: ComponentId): string {
 
 export function soloShortName(id: ComponentId): string {
   return SOLO_NAMES[id]?.short ?? COMPONENTS[id].shortName
+}
+
+/**
+ * Nom à employer quand la pièce est DÉSIGNÉE PAR SA PLACE dans le
+ * boîtier : montage et démontage.
+ *
+ * C'est l'inverse de `soloName` : ici la position est justement ce qui
+ * distingue les jumelles. Le ventilateur avant aspire l'air frais, celui
+ * de l'arrière l'expulse — les appeler tous les deux « Ventilateur »,
+ * alors que deux emplacements différents clignotent dans le boîtier, ne
+ * veut rien dire.
+ */
+export function placedName(id: ComponentId): string {
+  return COMPONENTS[id].name
+}
+
+export function placedShortName(id: ComponentId): string {
+  return COMPONENTS[id].shortName
 }
 
 /**

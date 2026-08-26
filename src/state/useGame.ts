@@ -35,6 +35,11 @@ interface GameState {
   sound: boolean
   quality: 'bas' | 'moyen' | 'eleve'
   showHelp: boolean
+  /**
+   * Raccourcis d'enseignant : accès direct à n'importe quel chapitre.
+   * S'ouvre depuis l'accueil avec un code, et reste actif sur ce poste.
+   */
+  dev: boolean
 
   setPseudo: (v: string) => void
   go: (s: Screen) => void
@@ -48,6 +53,9 @@ interface GameState {
   setSound: (v: boolean) => void
   setQuality: (q: 'bas' | 'moyen' | 'eleve') => void
   setShowHelp: (v: boolean) => void
+  setDev: (v: boolean) => void
+  /** Marque tout le parcours comme terminé (démonstration en classe). */
+  devCompleteAll: () => void
   reset: () => void
 }
 
@@ -102,6 +110,7 @@ export const useGame = create<GameState>()(
       sound: true,
       quality: 'eleve',
       showHelp: true,
+      dev: false,
       ...EMPTY,
 
       setPseudo: (v) => set({ pseudo: v.slice(0, 24) }),
@@ -110,6 +119,22 @@ export const useGame = create<GameState>()(
       setSound: (sound) => set({ sound }),
       setQuality: (quality) => set({ quality }),
       setShowHelp: (showHelp) => set({ showHelp }),
+      setDev: (dev) => set({ dev }),
+
+      /**
+       * Écrit directement les résultats, sans passer par `finishChapter` :
+       * on veut ouvrir les portes, pas distribuer des badges qui n'ont pas
+       * été gagnés.
+       */
+      devCompleteAll: () =>
+        set({
+          results: Object.fromEntries(
+            CHAPTERS.map((c) => [
+              c.id,
+              { stars: 3, bestScore: c.xp, mistakes: 0, seconds: 0, hintsUsed: 0, done: true },
+            ]),
+          ) as GameState['results'],
+        }),
 
       discover: (id) => {
         if (get().discovered.includes(id)) return
@@ -191,6 +216,7 @@ export const useGame = create<GameState>()(
         sound: s.sound,
         quality: s.quality,
         showHelp: s.showHelp,
+        dev: s.dev,
       }),
     },
   ),

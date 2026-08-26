@@ -16,7 +16,7 @@ import { asPart } from '@/three/models'
 import type { CameraViewId } from '@/three/layout'
 import { InfoCard } from '@/ui/InfoCard'
 import { Btn } from '@/ui/bits'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, Feedback } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -107,7 +107,9 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
     useHint.setState({ flash: {} })
     useExercise.getState().begin('decouverte', COMPONENT_IDS.length)
     useBuild.getState().resetBuild(ALL_INSTALLED)
-    useBuild.getState().set({ explode: 0.4, labels: true, running: true, powered: true })
+    // On part TOUJOURS de la machine montée : c'est ainsi qu'elle se
+    // présente en vrai, et c'est à l'élève d'écarter les pièces.
+    useBuild.getState().set({ explode: 0, labels: true, running: true, powered: true })
   }, [])
 
   // Fin automatique quand tout est découvert
@@ -129,7 +131,7 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
             <b>🖱️ Clic gauche</b> pivoter autour de la machine
           </div>
           <div>
-            <b>🎚️ Le curseur</b> écarte les pièces pour voir dedans
+            <b>🎚️ Le curseur du haut</b> écarte les pièces pour voir dedans
           </div>
           <div>
             <b>👆 Clique</b> sur une pièce de la machine pour la découvrir
@@ -142,20 +144,10 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
 
       {ex.phase === 'play' && (
         <>
+          <ExplodeSlider />
+
           {/* Panneau de gauche : outils de vue + liste des composants */}
           <div className="tools card">
-            <label className="tools-row">
-              <span>Vue éclatée</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={explode}
-                onChange={(e) => setBuild({ explode: +e.target.value })}
-              />
-            </label>
-
             <div className="tools-views">
               {VIEWS.map((v) => (
                 <button key={v.id} className="btn btn-sm btn-ghost" onClick={() => onView(v.id)}>

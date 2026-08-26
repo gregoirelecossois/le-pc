@@ -319,3 +319,44 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
     </Modal>
   )
 }
+
+/* ---------------------------------------------------------------- */
+/*  Curseur de vue éclatée                                           */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Le réglage le plus utilisé des ateliers, donc le plus visible :
+ * une large réglette posée en haut, au centre de l'écran.
+ *
+ * Il vivait auparavant dans le panneau de gauche, minuscule et perdu
+ * au milieu des autres outils. Les ateliers démarrent maintenant sur la
+ * machine MONTÉE : c'est l'élève qui écarte les pièces quand il en a
+ * besoin, et le geste doit donc sauter aux yeux.
+ */
+export function ExplodeSlider() {
+  const explode = useBuild((s) => s.explode)
+  const setBuild = useBuild((s) => s.set)
+
+  return (
+    <div className="explodebar card">
+      <div className="explodebar-head">
+        <span className="explodebar-icon">🎚️</span>
+        <b>Vue éclatée</b>
+        <span className="explodebar-pct">{Math.round(explode * 100)} %</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={explode}
+        aria-label="Écarter les pièces de la machine"
+        onChange={(e) => setBuild({ explode: +e.target.value })}
+      />
+      <div className="explodebar-ends">
+        <span>Machine montée</span>
+        <span>Pièces écartées</span>
+      </div>
+    </div>
+  )
+}

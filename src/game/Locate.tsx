@@ -9,7 +9,7 @@ import { COMPONENTS, lowerName, sameComponent, soloName, type ComponentId } from
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
 import { asPart } from '@/three/models'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, Feedback, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -97,8 +97,6 @@ function next() {
 export function LocateUi() {
   const ex = useExercise()
   const { order, index, finished } = useLocate()
-  const explode = useBuild((s) => s.explode)
-  const setBuild = useBuild((s) => s.set)
   const [result, setResult] = useState<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
   const ready = useReady()
 
@@ -107,7 +105,8 @@ export function LocateUi() {
     useLocate.setState({ order: list, index: 0, flash: {}, locked: false, finished: false })
     useExercise.getState().begin('reperer', list.length)
     useBuild.getState().resetBuild(ALL_INSTALLED)
-    useBuild.getState().set({ explode: 0.62, labels: false, running: true, powered: true })
+    // Machine montée au départ : le curseur du haut est là pour l'ouvrir.
+    useBuild.getState().set({ explode: 0, labels: false, running: true, powered: true })
   }, [])
 
   useEffect(() => {
@@ -129,7 +128,7 @@ export function LocateUi() {
       <ExerciseIntro>
         <div className="intro-tips">
           <div>
-            <b>🎚️ Le curseur</b> écarte les pièces si tu n'arrives pas à cliquer
+            <b>🎚️ Le curseur du haut</b> écarte les pièces si tu n'arrives pas à cliquer
           </div>
           <div>
             <b>🖱️ Clic droit</b> déplace la vue, molette pour zoomer
@@ -139,19 +138,7 @@ export function LocateUi() {
 
       {ex.phase === 'play' && target && (
         <>
-          <div className="tools card tools-thin">
-            <label className="tools-row">
-              <span>Vue éclatée</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={explode}
-                onChange={(e) => setBuild({ explode: +e.target.value })}
-              />
-            </label>
-          </div>
+          <ExplodeSlider />
 
           <div className="prompt card">
             <div className="prompt-label">Clique sur…</div>

@@ -9,6 +9,19 @@ import { Html } from '@react-three/drei'
 import { CONNECTORS, type CableDef, type ConnectorId } from '@/data/cables'
 import type { Vec3 } from './layout'
 
+/**
+ * Les deux états de « cliquabilité » d'un repère.
+ *
+ * On PERMUTE ces deux fonctions, on ne remet jamais la propriété à
+ * `undefined` : react-three-fiber ne sait pas restaurer la méthode
+ * d'origine d'un objet three.js, si bien qu'un repère rendu une fois
+ * inerte le restait pour toujours. C'est exactement ce qui arrivait au
+ * faisceau du bloc d'alimentation : il devenait inerte pendant la
+ * deuxième moitié du câble 1, et le câble 2 ne pouvait plus démarrer.
+ */
+const HIT = THREE.Mesh.prototype.raycast
+const NO_HIT: THREE.Mesh['raycast'] = () => null
+
 /* ---------------------------------------------------------------- */
 /*  Un câble : courbe souple entre deux points                       */
 /* ---------------------------------------------------------------- */
@@ -68,7 +81,7 @@ export function Cable3D({
   })
 
   return (
-    <mesh ref={mesh} geometry={geo} castShadow={!preview} raycast={() => null}>
+    <mesh ref={mesh} geometry={geo} castShadow={!preview} raycast={NO_HIT}>
       <meshStandardMaterial
         color={preview ? '#4dd0e1' : cable.color}
         roughness={0.72}
@@ -86,6 +99,7 @@ export function Cable3D({
 /* ---------------------------------------------------------------- */
 
 export type MarkerState = 'idle' | 'active' | 'ok' | 'bad' | 'dim'
+
 
 const MARKER_COLOR: Record<MarkerState, string> = {
   idle: '#4dd0e1',
@@ -130,7 +144,7 @@ export function ConnectorMarker({
     <group position={c.position}>
       <group ref={g}>
         <mesh
-          raycast={onClick ? undefined : () => null}
+          raycast={onClick ? HIT : NO_HIT}
           onClick={(e) => {
             e.stopPropagation()
             onClick?.(id)
@@ -144,7 +158,7 @@ export function ConnectorMarker({
           <sphereGeometry args={[c.radius, 18, 14]} />
           <meshBasicMaterial color={color} transparent opacity={MARKER_OPACITY[state]} depthWrite={false} />
         </mesh>
-        <mesh raycast={() => null}>
+        <mesh raycast={NO_HIT}>
           <sphereGeometry args={[c.radius * 0.42, 14, 10]} />
           <meshBasicMaterial
             color={color}
@@ -195,7 +209,7 @@ export function PortMarker({
     <group position={position}>
       <group ref={g}>
         <mesh
-          raycast={onClick ? undefined : () => null}
+          raycast={onClick ? HIT : NO_HIT}
           onClick={(e) => {
             e.stopPropagation()
             onClick?.()
@@ -209,7 +223,7 @@ export function PortMarker({
           <sphereGeometry args={[radius, 16, 12]} />
           <meshBasicMaterial color={color} transparent opacity={MARKER_OPACITY[state]} depthWrite={false} />
         </mesh>
-        <mesh raycast={() => null}>
+        <mesh raycast={NO_HIT}>
           <sphereGeometry args={[radius * 0.38, 12, 10]} />
           <meshBasicMaterial
             color={color}
