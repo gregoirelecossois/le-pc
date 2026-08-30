@@ -11,13 +11,9 @@
  */
 
 import { CHAPTERS } from '@/data/chapters'
-import {
-  CATEGORY_LABEL,
-  COMPONENTS,
-  COMPONENT_IDS,
-  type ComponentId,
-} from '@/data/components'
-import { KIND_LABEL, PERIPHERALS, type Peripheral, type PeripheralKind } from '@/data/peripherals'
+import { COMPONENT_IDS } from '@/data/components'
+import { LESSON_COMPONENTS, LESSON_PERIPHERALS } from '@/data/lesson'
+import { PERIPHERALS, type PeripheralKind } from '@/data/peripherals'
 import type { ChapterId } from '@/data/chapters'
 import type { ChapterResult } from '@/state/useGame'
 import type { Shot, ShotId } from '@/three/Thumbnails'
@@ -202,21 +198,13 @@ export function buildRevisionPdf(d: SheetData): Blob {
   /* ---------------------------------------------------------------- */
 
   banner(
-    'Leçon 1 — Les composants du PC',
+    'Leçon 1A — Les composants du PC',
     "L'unité centrale est la « tour » de l'ordinateur. À l'intérieur, chaque pièce a un rôle précis : voici comment les reconnaître et à quoi chacune sert.",
     L1,
   )
 
-  for (const id of COMPONENT_IDS) {
-    const c = COMPONENTS[id]
-    card({
-      key: shotOf(id),
-      title: c.acronym ? `${c.shortName} (${c.acronym})` : c.shortName,
-      label: CATEGORY_LABEL[c.category],
-      role: c.role,
-      memo: `À retenir : ${c.analogy}`,
-      accent: ink(c.color),
-    })
+  for (const e of LESSON_COMPONENTS) {
+    card({ ...e, key: e.shot, accent: ink(e.color) })
   }
 
   /* ---------------------------------------------------------------- */
@@ -225,20 +213,13 @@ export function buildRevisionPdf(d: SheetData): Blob {
 
   y += 10
   banner(
-    'Leçon 2 — Les périphériques principaux du PC',
+    'Leçon 2A — Les périphériques principaux du PC',
     "Un périphérique est un appareil branché AUTOUR de l'unité centrale. Il est d'ENTRÉE quand il envoie de l'information à l'ordinateur, de SORTIE quand il en reçoit pour te la restituer, et parfois les deux à la fois.",
     L2,
   )
 
-  for (const p of PERIPHERALS as Peripheral[]) {
-    card({
-      key: `peri:${p.id}` as ShotId,
-      title: p.name,
-      label: KIND_LABEL[p.kind],
-      role: p.role,
-      memo: `Sa fiche : ${p.plugName}. ${p.plugHint}`,
-      accent: KIND_INK[p.kind],
-    })
+  for (const e of LESSON_PERIPHERALS) {
+    card({ ...e, key: e.shot, accent: KIND_INK[e.kind as PeripheralKind] })
   }
 
   y += 6
@@ -306,17 +287,4 @@ export function buildRevisionPdf(d: SheetData): Blob {
 
   footer()
   return doc.build()
-}
-
-/** Les prises de vue nécessaires à la fiche. */
-export function sheetShotQueue(): ShotId[] {
-  return [
-    ...COMPONENT_IDS.map((id: ComponentId) => shotOf(id)),
-    ...PERIPHERALS.map((p) => `peri:${p.id}` as ShotId),
-  ]
-}
-
-/** La photo qui illustre un composant. */
-export function shotOf(id: ComponentId): ShotId {
-  return id === 'case' ? 'case' : (`part:${id}` as ShotId)
 }

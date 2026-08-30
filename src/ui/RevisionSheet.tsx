@@ -10,19 +10,16 @@
 import { useState } from 'react'
 import { BADGES } from '@/data/badges'
 import { CHAPTERS } from '@/data/chapters'
-import {
-  CATEGORY_LABEL,
-  COMPONENTS,
-  COMPONENT_IDS,
-} from '@/data/components'
-import { KIND_LABEL, PERIPHERALS } from '@/data/peripherals'
+import { COMPONENT_IDS } from '@/data/components'
+import { LESSON_COMPONENTS, LESSON_PERIPHERALS, lessonShotQueue } from '@/data/lesson'
+import { PERIPHERALS } from '@/data/peripherals'
 import { useGame, useLevel } from '@/state/useGame'
 import { ThumbnailStudio, useThumbShots } from '@/three/Thumbnails'
 import { Btn, Stars } from './bits'
 import { downloadPdf } from './pdf'
-import { buildRevisionPdf, ink, sheetShotQueue, shotOf } from './sheetPdf'
+import { buildRevisionPdf, ink } from './sheetPdf'
 
-const QUEUE = sheetShotQueue()
+const QUEUE = lessonShotQueue()
 
 /** Tous les ateliers sont-ils terminés ? */
 export function sheetUnlocked(results: ReturnType<typeof useGame.getState>['results']) {
@@ -122,39 +119,33 @@ export function RevisionSheet() {
 
         {/* ---------------- Leçon 1 ---------------- */}
 
-        <div className="lesson-banner l1">Leçon 1 — Les composants du PC</div>
+        <div className="lesson-banner l1">Leçon 1A — Les composants du PC</div>
         <p className="lesson-intro">
           L'unité centrale est la « tour » de l'ordinateur. À l'intérieur, chaque pièce a un
           rôle précis : voici comment les reconnaître et à quoi chacune sert.
         </p>
 
         <div className="lesson-cards">
-          {COMPONENT_IDS.map((id) => {
-            const c = COMPONENTS[id]
-            const img = shots[shotOf(id)]
+          {LESSON_COMPONENTS.map((e) => {
+            const img = shots[e.shot]
             return (
               <article
-                key={id}
+                key={e.id}
                 className="lcard"
                 // Les couleurs vives du jeu sont pensées sur fond noir : sur
                 // la feuille blanche, on prend les mêmes que le PDF.
-                style={{ '--c': ink(c.color) } as React.CSSProperties}
+                style={{ '--c': ink(e.color) } as React.CSSProperties}
               >
                 <div className="lcard-img">
                   {img ? <img src={img.url} alt="" /> : <span className="lcard-wait" />}
                 </div>
                 <div className="lcard-body">
                   <div className="lcard-top">
-                    <h3>
-                      {c.shortName}
-                      {c.acronym && <em> ({c.acronym})</em>}
-                    </h3>
-                    <span className="lcard-chip">{CATEGORY_LABEL[c.category]}</span>
+                    <h3>{e.title}</h3>
+                    <span className="lcard-chip">{e.label}</span>
                   </div>
-                  <p className="lcard-role">{c.role}</p>
-                  <p className="lcard-memo">
-                    <b>À retenir :</b> {c.analogy}
-                  </p>
+                  <p className="lcard-role">{e.role}</p>
+                  <p className="lcard-memo">{e.memo}</p>
                 </div>
               </article>
             )
@@ -163,7 +154,7 @@ export function RevisionSheet() {
 
         {/* ---------------- Leçon 2 ---------------- */}
 
-        <div className="lesson-banner l2">Leçon 2 — Les périphériques principaux du PC</div>
+        <div className="lesson-banner l2">Leçon 2A — Les périphériques principaux du PC</div>
         <p className="lesson-intro">
           Un périphérique est un appareil branché AUTOUR de l'unité centrale. Il est
           d'<b>entrée</b> quand il envoie de l'information à l'ordinateur, de <b>sortie</b>{' '}
@@ -171,22 +162,20 @@ export function RevisionSheet() {
         </p>
 
         <div className="lesson-cards">
-          {PERIPHERALS.map((p) => {
-            const img = shots[`peri:${p.id}`]
+          {LESSON_PERIPHERALS.map((e) => {
+            const img = shots[e.shot]
             return (
-              <article key={p.id} className={`lcard k-${p.kind}`}>
+              <article key={e.id} className={`lcard k-${e.kind}`}>
                 <div className="lcard-img">
                   {img ? <img src={img.url} alt="" /> : <span className="lcard-wait" />}
                 </div>
                 <div className="lcard-body">
                   <div className="lcard-top">
-                    <h3>{p.name}</h3>
-                    <span className="lcard-chip">{KIND_LABEL[p.kind]}</span>
+                    <h3>{e.title}</h3>
+                    <span className="lcard-chip">{e.label}</span>
                   </div>
-                  <p className="lcard-role">{p.role}</p>
-                  <p className="lcard-memo">
-                    <b>Sa fiche :</b> {p.plugName}. {p.plugHint}
-                  </p>
+                  <p className="lcard-role">{e.role}</p>
+                  <p className="lcard-memo">{e.memo}</p>
                 </div>
               </article>
             )

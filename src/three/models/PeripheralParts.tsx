@@ -157,39 +157,84 @@ function Keyboard() {
 /*  La souris                                                        */
 /* ================================================================ */
 
+/**
+ * Coque de la souris : un galet dont le nez s'affine et dont le ventre
+ * est plat.
+ *
+ * Une sphère aplatie ne suffit pas — elle donne un caillou. On déforme
+ * donc les sommets : compression en hauteur, étirement en longueur,
+ * rétrécissement progressif vers l'avant, et dessous rabattu pour que
+ * l'objet POSE sur la table au lieu d'y flotter.
+ */
+function MouseShell() {
+  const geo = useMemo(() => {
+    const g = new THREE.SphereGeometry(3.25, 48, 32)
+    const p = g.attributes.position as THREE.BufferAttribute
+    const half = 3.25 * 1.66
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i)
+      let y = p.getY(i) * 0.76
+      const z = p.getZ(i) * 1.66
+      // 0 à l'arrière, 1 à l'avant : le nez perd trois dixièmes de largeur
+      const t = Math.min(1, Math.max(0, (z + half) / (2 * half)))
+      x *= 1 - 0.3 * t * t
+      if (y < 0) y *= 0.3
+      p.setXYZ(i, x, y, z)
+    }
+    g.computeVertexNormals()
+    return g
+  }, [])
+
+  return (
+    <mesh geometry={geo} position={[0, 0.75, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color="#191b1f" roughness={0.74} metalness={0.05} envMapIntensity={0.5} />
+    </mesh>
+  )
+}
+
+/** Hauteur du dessus de la coque à une profondeur donnée. */
+function shellTop(z: number) {
+  const half = 3.25 * 1.66
+  const k = Math.max(0, 1 - (z / half) ** 2)
+  return 0.75 + 3.25 * 0.76 * Math.sqrt(k)
+}
+
 function Mouse({ showcase = false }: { showcase?: boolean }) {
-  // Coque : une sphère aplatie et allongée. Sa partie basse plonge sous la
-  // semelle, qui est donc taillée à la section de la coque à cette hauteur —
-  // sinon elle dépasse de partout comme une planche à roulettes.
-  const r = 3.3
+  // La ligne de séparation des deux boutons épouse le dos de la souris :
+  // un trait droit passerait sous la surface au milieu et ressortirait
+  // aux extrémités.
+  const seam = useMemo(() => {
+    const pts: THREE.Vector3[] = []
+    for (let z = 4.9; z >= -2.6; z -= 0.5) pts.push(new THREE.Vector3(0, shellTop(z) - 0.03, z))
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.055, 6, false)
+  }, [])
 
   return (
     <group name="mouse">
-      <mesh position={[0, 1.7, 0]} scale={[1, 0.62, 1.75]} castShadow receiveShadow>
-        <sphereGeometry args={[r, 30, 20]} />
-        <meshStandardMaterial color="#252a33" roughness={0.6} metalness={0.05} envMapIntensity={0.6} />
+      <MouseShell />
+      <mesh geometry={seam} raycast={() => null}>
+        <meshStandardMaterial color="#07090c" roughness={0.9} />
       </mesh>
-      {/* Semelle */}
-      <mesh position={[0, 0.2, 0]} scale={[1, 1, 1.75]}>
-        <cylinderGeometry args={[2.2, 2.2, 0.4, 28]} />
-        <meshStandardMaterial color="#0d1013" roughness={0.9} />
+
+      {/* Logement de la molette, creusé dans le dos */}
+      <mesh position={[0, shellTop(3.15) - 0.32, 3.15]}>
+        <boxGeometry args={[0.92, 0.7, 1.5]} />
+        <meshStandardMaterial color="#07090c" roughness={0.95} />
       </mesh>
-      {/* Fente entre les deux boutons : elle TRAVERSE la surface, sinon le
-          trait reste enfoui sous la coque et la souris n'est qu'un galet. */}
-      <mesh position={[0, 3.25, 3.0]}>
-        <boxGeometry args={[0.16, 0.55, 4.2]} />
-        <meshStandardMaterial color="#05070a" roughness={0.95} />
+      {/* Molette : la seule pièce claire de l'objet, en métal strié */}
+      <mesh position={[0, shellTop(3.15) - 0.2, 3.15]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.58, 0.58, 0.52, 16]} />
+        <meshStandardMaterial color="#a8aeb7" metalness={0.9} roughness={0.35} />
       </mesh>
-      {/* Molette */}
-      <mesh position={[0, 3.18, 2.6]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.6, 0.6, 0.64, 18]} />
-        <meshStandardMaterial color="#3b4250" roughness={0.55} />
-      </mesh>
-      {/* Logo lumineux sur le dos de la souris */}
-      <mesh position={[0, 3.62, -2.0]} rotation={[-1.1, 0, 0]}>
-        <circleGeometry args={[0.75, 20]} />
-        <meshBasicMaterial color="#4dd0e1" toneMapped={false} transparent opacity={0.7} />
-      </mesh>
+
+      {/* Semelle : deux patins, comme sous une vraie souris */}
+      {[-3.1, 3.1].map((z) => (
+        <mesh key={z} position={[0, 0.06, z]} scale={[1, 1, 0.55]}>
+          <cylinderGeometry args={[1.9, 1.9, 0.12, 20]} />
+          <meshStandardMaterial color="#0b0d10" roughness={0.9} />
+        </mesh>
+      ))}
+
       {/* Sur le présentoir : le début du câble, sans lequel une souris vue
           de dessus ressemble à un galet. */}
       {showcase && <MouseTail />}
@@ -202,10 +247,10 @@ function MouseTail() {
   const geo = useMemo(() => {
     const curve = new THREE.CatmullRomCurve3(
       [
-        new THREE.Vector3(0, 1.6, 5.4),
-        new THREE.Vector3(0.4, 1.2, 8.0),
-        new THREE.Vector3(1.8, 0.7, 10.2),
-        new THREE.Vector3(4.2, 0.5, 11.4),
+        new THREE.Vector3(0, 1.3, 5.1),
+        new THREE.Vector3(0.4, 1.1, 7.6),
+        new THREE.Vector3(1.8, 0.7, 9.8),
+        new THREE.Vector3(4.2, 0.5, 11.2),
       ],
       false,
       'catmullrom',
@@ -224,72 +269,112 @@ function MouseTail() {
 /*  La manette de jeu                                                */
 /* ================================================================ */
 
+/**
+ * Manette filaire classique, façon Logitech F310 : corps gris-bleu,
+ * poignées noires, croix directionnelle à gauche, quatre boutons de
+ * couleur à droite, et les deux joysticks en bas.
+ *
+ * Les couleurs des quatre boutons sont normalisées depuis trente ans
+ * (vert en bas, rouge à droite, bleu à gauche, jaune en haut) : c'est ce
+ * qui fait reconnaître une manette d'un seul coup d'œil.
+ */
 function Gamepad() {
+  const SHELL = '#4c5468'
+  const GRIP = '#15171c'
   const face: { p: Vec3; c: string }[] = [
-    { p: [0, 0, -1.1], c: '#ffd166' },
-    { p: [1.1, 0, 0], c: '#ff6b6b' },
-    { p: [-1.1, 0, 0], c: '#7dd3fc' },
-    { p: [0, 0, 1.1], c: '#66d17a' },
+    { p: [0, 0, -1.15], c: '#e8b422' },
+    { p: [1.15, 0, 0], c: '#c8342c' },
+    { p: [-1.15, 0, 0], c: '#2f6fd0' },
+    { p: [0, 0, 1.15], c: '#2f9e52' },
   ]
 
   return (
     <group name="gamepad" position={[0, 3.2, 0]}>
       {/* Corps central */}
       <SoftBox args={[12, 3.4, 7.4]} radius={1.1}>
-        <meshStandardMaterial color="#22262e" roughness={0.5} metalness={0.2} />
+        <meshStandardMaterial color={SHELL} roughness={0.52} metalness={0.14} />
       </SoftBox>
+      {/* Bandeau noir du bas, où viennent se greffer les poignées */}
+      <SoftBox args={[11.4, 1.5, 6.6]} radius={0.9} position={[0, -1.4, 0.5]}>
+        <meshStandardMaterial color={GRIP} roughness={0.62} />
+      </SoftBox>
+
       {/* Poignées, écartées vers le bas */}
       {[-1, 1].map((s) => (
         <group key={s} position={[s * 6.2, -2.4, 1.4]} rotation={[0.5, s * 0.35, s * 0.28]}>
           <SoftBox args={[4.2, 8.2, 4.2]} radius={1.6}>
-            <meshStandardMaterial color="#1c2027" roughness={0.55} metalness={0.15} />
+            <meshStandardMaterial color={GRIP} roughness={0.66} />
           </SoftBox>
         </group>
       ))}
-      {/* Gâchettes */}
+
+      {/* Gâchettes du dessus */}
       {[-1, 1].map((s) => (
         <mesh key={s} position={[s * 4.2, 1.3, -3.2]} rotation={[0.5, 0, 0]} castShadow>
           <boxGeometry args={[3, 1, 1.6]} />
-          <meshStandardMaterial color="#2b3038" roughness={0.5} />
+          <meshStandardMaterial color="#2a2f38" roughness={0.5} />
         </mesh>
       ))}
-      {/* Joysticks */}
-      {[-3.4, 3.4].map((x) => (
-        <group key={x} position={[x, 1.7, 1.6]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[1.25, 1.35, 0.9, 20]} />
-            <meshStandardMaterial color="#15181e" roughness={0.7} />
-          </mesh>
-          <mesh position={[0, 0.75, 0]} scale={[1, 0.55, 1]} castShadow>
-            <sphereGeometry args={[1.05, 20, 14]} />
-            <meshStandardMaterial color="#0e1116" roughness={0.85} />
-          </mesh>
-        </group>
-      ))}
-      {/* Croix directionnelle */}
-      <group position={[-3.4, 1.75, -1.6]}>
-        <mesh castShadow>
-          <boxGeometry args={[2.6, 0.5, 0.9]} />
-          <meshStandardMaterial color="#12151a" roughness={0.7} />
+
+      {/* Croix directionnelle, sur son plateau rond */}
+      <group position={[-3.6, 1.75, -1.5]}>
+        <mesh position={[0, -0.18, 0]}>
+          <cylinderGeometry args={[1.85, 1.85, 0.34, 24]} />
+          <meshStandardMaterial color="#3a4150" roughness={0.6} />
         </mesh>
         <mesh castShadow>
-          <boxGeometry args={[0.9, 0.5, 2.6]} />
-          <meshStandardMaterial color="#12151a" roughness={0.7} />
+          <boxGeometry args={[2.7, 0.52, 0.95]} />
+          <meshStandardMaterial color="#101318" roughness={0.7} />
+        </mesh>
+        <mesh castShadow>
+          <boxGeometry args={[0.95, 0.52, 2.7]} />
+          <meshStandardMaterial color="#101318" roughness={0.7} />
         </mesh>
       </group>
+
       {/* Les quatre boutons d'action */}
-      <group position={[3.4, 1.8, -1.6]}>
+      <group position={[3.6, 1.75, -1.5]}>
+        <mesh position={[0, -0.18, 0]}>
+          <cylinderGeometry args={[1.95, 1.95, 0.34, 24]} />
+          <meshStandardMaterial color="#3a4150" roughness={0.6} />
+        </mesh>
         {face.map((b) => (
           <mesh key={b.c} position={b.p} castShadow>
-            <cylinderGeometry args={[0.52, 0.52, 0.42, 16]} />
-            <meshStandardMaterial color={b.c} roughness={0.4} metalness={0.2} />
+            <cylinderGeometry args={[0.54, 0.54, 0.44, 18]} />
+            <meshStandardMaterial color={b.c} roughness={0.35} metalness={0.15} />
           </mesh>
         ))}
       </group>
-      {/* Bouton central lumineux */}
-      <mesh position={[0, 1.75, 0.3]}>
-        <cylinderGeometry args={[0.7, 0.7, 0.3, 18]} />
-        <meshBasicMaterial color="#dfe8f5" toneMapped={false} />
+
+      {/* Joysticks, en bas et vers l'intérieur */}
+      {[-2.6, 2.6].map((x) => (
+        <group key={x} position={[x, 1.6, 2.1]}>
+          <mesh>
+            <cylinderGeometry args={[1.5, 1.6, 0.5, 22]} />
+            <meshStandardMaterial color="#3a4150" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.35, 0]} castShadow>
+            <cylinderGeometry args={[0.85, 1.0, 0.7, 20]} />
+            <meshStandardMaterial color="#15181e" roughness={0.75} />
+          </mesh>
+          <mesh position={[0, 0.78, 0]} scale={[1, 0.42, 1]} castShadow>
+            <sphereGeometry args={[1.02, 22, 16]} />
+            <meshStandardMaterial color="#0e1116" roughness={0.88} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Petits boutons du milieu : mode, retour, départ */}
+      {[-1.1, 0, 1.1].map((x, i) => (
+        <mesh key={x} position={[x, 1.72, -1.4]} castShadow>
+          <cylinderGeometry args={[0.32, 0.32, 0.28, 14]} />
+          <meshStandardMaterial color={i === 1 ? '#8b929e' : '#22262e'} roughness={0.5} />
+        </mesh>
+      ))}
+      {/* Voyant du milieu */}
+      <mesh position={[0, 1.76, 0.5]}>
+        <cylinderGeometry args={[0.24, 0.24, 0.26, 14]} />
+        <meshBasicMaterial color="#7ef0a0" toneMapped={false} />
       </mesh>
     </group>
   )
@@ -456,38 +541,62 @@ function InternetBox() {
 /*  La clé USB                                                       */
 /* ================================================================ */
 
+/**
+ * Clé USB à connecteur rétractable, façon Verbatim PinStripe : un corps
+ * noir laqué marqué d'une nervure dans la longueur, un curseur strié
+ * qu'on pousse au pouce, et le connecteur USB-A sorti à l'avant.
+ */
 function UsbKey() {
+  const BODY = '#111318'
+
   return (
     <group name="usbkey">
-      {/* Fiche USB-A intégrée : c'est ELLE qui fait reconnaître une clé */}
-      <group position={[0, 0.55, -0.6]}>
+      {/* Connecteur USB-A : c'est LUI qui fait reconnaître une clé */}
+      <group position={[0, 0.62, -0.85]}>
         <mesh castShadow>
-          <boxGeometry args={[1.2, 0.45, 1.5]} />
-          <meshStandardMaterial color="#b9c0c9" metalness={1} roughness={0.32} />
+          <boxGeometry args={[1.26, 0.52, 1.7]} />
+          <meshStandardMaterial color="#b6bdc6" metalness={1} roughness={0.3} />
         </mesh>
-        <mesh position={[0, -0.09, -0.1]}>
-          <boxGeometry args={[0.94, 0.16, 1.3]} />
-          <meshStandardMaterial color="#2f6fd0" roughness={0.55} />
+        {/* Languette intérieure BLEUE : la marque de l'USB 3.0 */}
+        <mesh position={[0, -0.11, 0.06]}>
+          <boxGeometry args={[1.02, 0.2, 1.66]} />
+          <meshStandardMaterial color="#2f6fd0" roughness={0.5} />
         </mesh>
+        {/* Les deux lucarnes carrées du blindage */}
+        {[-0.3, 0.3].map((x) => (
+          <mesh key={x} position={[x, 0.27, -0.15]}>
+            <boxGeometry args={[0.3, 0.06, 0.3]} />
+            <meshStandardMaterial color="#0a0c10" roughness={0.9} />
+          </mesh>
+        ))}
       </group>
+
       {/* Corps */}
-      <SoftBox args={[2.2, 1.1, 5.4]} radius={0.28} position={[0, 0.55, 2.9]}>
-        <meshStandardMaterial color="#1d222a" roughness={0.42} metalness={0.3} />
+      <SoftBox args={[2.3, 1.24, 5.0]} radius={0.3} position={[0, 0.62, 2.5]}>
+        <meshStandardMaterial color={BODY} roughness={0.32} metalness={0.25} />
       </SoftBox>
-      {/* Anneau porte-clés */}
-      <mesh position={[0, 0.55, 5.9]} rotation={[0, Math.PI / 2, 0]}>
-        <torusGeometry args={[0.5, 0.12, 8, 18]} />
-        <meshStandardMaterial color="#9aa1ab" metalness={1} roughness={0.35} />
-      </mesh>
-      {/* Étiquette */}
-      <mesh position={[0, 1.12, 3.2]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.5, 2.6]} />
-        <meshStandardMaterial color="#4dd0e1" roughness={0.6} />
-      </mesh>
-      {/* Voyant d'activité */}
-      <mesh position={[0, 0.55, 5.35]}>
-        <boxGeometry args={[0.4, 0.2, 0.06]} />
-        <meshBasicMaterial color="#66ff9a" toneMapped={false} />
+      {/* La nervure du dessus, qui donne son nom à la clé */}
+      <SoftBox args={[1.44, 0.26, 4.3]} radius={0.11} position={[0, 1.18, 2.6]}>
+        <meshStandardMaterial color="#1c2027" roughness={0.28} metalness={0.3} />
+      </SoftBox>
+      {/* Curseur du pouce, avec ses stries */}
+      <SoftBox args={[1.5, 0.32, 1.5]} radius={0.12} position={[0, 1.2, 4.0]}>
+        <meshStandardMaterial color="#23272f" roughness={0.4} />
+      </SoftBox>
+      {[-0.45, 0, 0.45].map((z) => (
+        <mesh key={z} position={[0, 1.37, 4.0 + z]}>
+          <boxGeometry args={[1.3, 0.06, 0.14]} />
+          <meshStandardMaterial color="#0c0e12" roughness={0.85} />
+        </mesh>
+      ))}
+
+      {/* Capuchon arrière, un rien plus large, et son œillet */}
+      <SoftBox args={[2.44, 1.36, 1.7]} radius={0.34} position={[0, 0.62, 5.9]}>
+        <meshStandardMaterial color="#0d0f13" roughness={0.36} metalness={0.2} />
+      </SoftBox>
+      <mesh position={[0, 1.16, 6.35]} rotation={[0, Math.PI / 2, 0]}>
+        <torusGeometry args={[0.3, 0.09, 8, 16]} />
+        <meshStandardMaterial color="#0a0c10" roughness={0.5} />
       </mesh>
     </group>
   )
@@ -498,6 +607,12 @@ function UsbKey() {
 /* ================================================================ */
 
 function WallOutlet({ showcase = false }: { showcase?: boolean }) {
+  // Présenté seul, l'objet à reconnaître est le CÂBLE, pas le mur : on
+  // montre alors le cordon complet, fiche secteur d'un côté, fiche C13 de
+  // l'autre. Dans l'atelier de branchement, au contraire, la prise murale
+  // explique d'où vient le 230 V.
+  if (showcase) return <PowerCord />
+
   return (
     <group name="power">
       {/* Morceau de mur */}
@@ -518,23 +633,12 @@ function WallOutlet({ showcase = false }: { showcase?: boolean }) {
         <cylinderGeometry args={[0.24, 0.24, 1.2, 12]} />
         <meshStandardMaterial color="#b9bfc8" metalness={1} roughness={0.35} />
       </mesh>
-      {/* Sur le présentoir : le câble et sa fiche C13, sinon on ne verrait
-          qu'une prise murale — or l'objet à reconnaître est le CÂBLE. */}
-      {showcase && (
-        <>
-          <PowerTail />
-          <group position={[7.5, 2.6, 5.4]} rotation={[0, -1.1, 0]}>
-            <C13Head />
-          </group>
-        </>
-      )}
 
       {/* Fiche mâle enfoncée dans la prise murale */}
       <group position={[0, 11.4, 1.6]}>
         <SoftBox args={[4.6, 4.6, 2.6]} radius={0.6}>
           <meshStandardMaterial color="#14171c" roughness={0.55} />
         </SoftBox>
-        {/* Les deux broches, cachées dans le mur */}
         {[-0.95, 0.95].map((x) => (
           <mesh key={x} position={[x, 0, -1.8]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.24, 0.24, 1.6, 12]} />
@@ -546,47 +650,96 @@ function WallOutlet({ showcase = false }: { showcase?: boolean }) {
   )
 }
 
-/** Le bout de câble qui descend de la prise murale, sur le présentoir. */
-function PowerTail() {
+/**
+ * Le cordon secteur seul : fiche coudée en haut à gauche, boucle de câble,
+ * fiche C13 en bas à droite. Il tient dans la même boîte englobante que la
+ * prise murale, pour que le présentoir le cadre sans réglage particulier.
+ */
+function PowerCord() {
   const geo = useMemo(() => {
+    // Une boucle lâche, comme un câble vendu enroulé.
     const curve = new THREE.CatmullRomCurve3(
       [
-        new THREE.Vector3(0, 10.4, 2.9),
-        new THREE.Vector3(1.5, 6.5, 4.4),
-        new THREE.Vector3(4.5, 3.2, 5.2),
-        new THREE.Vector3(7.5, 2.6, 5.4),
+        new THREE.Vector3(-5.4, 18.4, 0),
+        new THREE.Vector3(-7.4, 13.5, 1.2),
+        new THREE.Vector3(-4.6, 8.6, 1.8),
+        new THREE.Vector3(1.2, 8.0, 0.6),
+        new THREE.Vector3(5.0, 11.6, -0.8),
+        new THREE.Vector3(3.4, 15.6, -1.0),
+        new THREE.Vector3(-1.4, 14.4, 0.2),
+        new THREE.Vector3(-3.4, 9.6, 1.0),
+        new THREE.Vector3(0.4, 5.4, 0.4),
+        new THREE.Vector3(5.6, 4.4, -0.2),
       ],
       false,
       'catmullrom',
       0.5,
     )
-    return new THREE.TubeGeometry(curve, 26, 0.42, 8, false)
+    return new THREE.TubeGeometry(curve, 120, 0.45, 10, false)
   }, [])
+
   return (
-    <mesh geometry={geo} castShadow>
-      <meshStandardMaterial color="#14171c" roughness={0.8} />
-    </mesh>
+    <group name="power">
+      <mesh geometry={geo} castShadow>
+        <meshStandardMaterial color="#15181d" roughness={0.72} />
+      </mesh>
+
+      {/* Fiche secteur, coudée : le câble en sort par le côté */}
+      <group position={[-5.4, 20.4, 0]} rotation={[0, 0, 0.18]}>
+        <SoftBox args={[5.0, 4.4, 3.4]} radius={1.1}>
+          <meshStandardMaterial color="#15181d" roughness={0.55} />
+        </SoftBox>
+        {/* Les deux broches rondes */}
+        {[-1.0, 1.0].map((x) => (
+          <mesh key={x} position={[x, 2.6, 0]} castShadow>
+            <cylinderGeometry args={[0.34, 0.34, 2.2, 14]} />
+            <meshStandardMaterial color="#c2c8d0" metalness={1} roughness={0.3} />
+          </mesh>
+        ))}
+        {/* Les deux languettes de terre, sur les flancs */}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 2.45, 0.4, 0]}>
+            <boxGeometry args={[0.22, 1.8, 1.4]} />
+            <meshStandardMaterial color="#9aa1ab" metalness={0.9} roughness={0.4} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Fiche C13, au bout du cordon */}
+      <group position={[7.4, 4.0, -0.4]} rotation={[0, 0.5, -0.35]}>
+        <C13Head />
+      </group>
+    </group>
   )
 }
 
-/** Tête de fiche C13, telle qu'on la voit au bout du câble d'alimentation. */
+/**
+ * Tête de fiche C13 : le petit bloc à trois trous, dont deux angles sont
+ * coupés — c'est ce détrompeur qui interdit de la brancher à l'envers.
+ */
 function C13Head() {
   return (
     <group>
       <mesh castShadow>
-        <boxGeometry args={[2.5, 1.9, 2.0]} />
-        <meshStandardMaterial color="#101317" roughness={0.55} />
+        <boxGeometry args={[2.6, 1.9, 2.2]} />
+        <meshStandardMaterial color="#101317" roughness={0.5} />
       </mesh>
-      <mesh position={[0, 0.62, 0]} castShadow>
-        <boxGeometry args={[2.0, 0.7, 2.0]} />
-        <meshStandardMaterial color="#101317" roughness={0.55} />
+      <mesh position={[0, 0.66, 0]} castShadow>
+        <boxGeometry args={[2.0, 0.65, 2.2]} />
+        <meshStandardMaterial color="#101317" roughness={0.5} />
       </mesh>
-      {[-0.7, 0, 0.7].map((x, i) => (
-        <mesh key={x} position={[x, i === 1 ? 0.45 : -0.25, -1.0]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.19, 0.19, 0.12, 12]} />
-          <meshStandardMaterial color="#05060a" roughness={0.95} />
+      {/* Les trois alvéoles */}
+      {[-0.72, 0, 0.72].map((x, i) => (
+        <mesh key={x} position={[x, i === 1 ? 0.5 : -0.3, -1.12]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 0.14, 12]} />
+          <meshStandardMaterial color="#04050a" roughness={0.95} />
         </mesh>
       ))}
+      {/* Manchon d'où sort le câble */}
+      <mesh position={[0, -0.1, 1.5]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.62, 0.78, 1.0, 16]} />
+        <meshStandardMaterial color="#15181d" roughness={0.7} />
+      </mesh>
     </group>
   )
 }

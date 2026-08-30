@@ -125,6 +125,7 @@ export function PeriShowcase({
   y = 22,
   pedestal = true,
   lights = true,
+  rot: rotOverride,
 }: {
   id: PeripheralModelId
   spin?: number
@@ -132,11 +133,18 @@ export function PeriShowcase({
   y?: number
   pedestal?: boolean
   lights?: boolean
+  /**
+   * Orientation imposée, à la place de celle du catalogue.
+   *
+   * Sur le présentoir l'objet tourne : un angle ingrat ne dure qu'une
+   * seconde. Sur une PHOTO, il dure toujours — d'où ce réglage.
+   */
+  rot?: Vec3
 }) {
   const g = useRef<THREE.Group>(null)
   const m = PERIPHERAL_MODELS[id]
   const scale = Math.min(target / Math.max(m.size[0], m.size[1], m.size[2]), 4)
-  const rot = m.display ?? [0, 0, 0]
+  const rot = rotOverride ?? m.display ?? [0, 0, 0]
 
   useFrame((_, dt) => {
     if (g.current) g.current.rotation.y += dt * spin * Math.PI * 2

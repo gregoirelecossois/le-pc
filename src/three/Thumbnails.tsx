@@ -21,6 +21,7 @@ import { PeriShowcase, Showcase } from './Showcase'
 import { CaseShell } from './models'
 import type { PartId } from './models'
 import type { PeripheralModelId } from './models/PeripheralParts'
+import type { Vec3 } from './layout'
 
 /** Une prise de vue à réaliser. */
 export type ShotId = `part:${PartId}` | `peri:${PeripheralModelId}` | 'case'
@@ -76,10 +77,15 @@ const PART_SHOT: Partial<Record<PartId, { yaw?: number }>> = {
   motherboard: { yaw: 0 },
 }
 
-const PERI_SHOT: Partial<Record<PeripheralModelId, { target?: number; tilt?: number }>> = {
-  keyboard: { tilt: 0.72 },
-  usbkey: { target: 30 },
-  mouse: { target: 15 },
+const PERI_SHOT: Partial<
+  Record<PeripheralModelId, { target?: number; tilt?: number; rot?: Vec3 }>
+> = {
+  // `rot` impose la pose : premier angle = on bascule le dessus vers la
+  // caméra, deuxième = on tourne l'objet de trois quarts.
+  keyboard: { rot: [0.3, -0.5, 0] },
+  mouse: { rot: [0.5, -0.6, 0], target: 17 },
+  gamepad: { rot: [0.42, -0.3, 0] },
+  usbkey: { rot: [0.34, 0.95, 0], target: 28 },
 }
 
 function Photographer() {
@@ -90,10 +96,18 @@ function Photographer() {
   useFrame(() => {
     const s = useThumbs.getState()
     if (s.index >= s.queue.length) return
-    // On compte les images passées depuis le dernier changement de pièce.
+    // Le compteur appartient à UNE pièce : dès que la file avance, il
+    // repart de zéro. Sans cela, sur une machine lente ou une image
+    // retardée, la photo pouvait être prise avant que React n'ait monté la
+    // pièce suivante — et l'objet précédent se retrouvait sous la mauvaise
+    // étiquette.
+    if (framesFor !== s.index) {
+      framesFor = s.index
+      frames = 0
+      return
+    }
     frames++
     if (frames < SETTLE) return
-    frames = 0
     const c = gl.domElement
     // La taille est relevée sur le canvas lui-même : elle dépend de la
     // densité d'écran, et le PDF doit annoncer la vraie dimension du JPEG.
@@ -116,6 +130,7 @@ function Photographer() {
   }
 
   const [kind, id] = shot.split(':') as ['part' | 'peri', string]
+  const shotOpts = PERI_SHOT[id as PeripheralModelId] ?? {}
 
   return kind === 'part' ? (
     // De trois quarts, comme une photo de catalogue : de face, une
@@ -126,11 +141,12 @@ function Photographer() {
   ) : (
     // Un quart de tour : de face, un clavier ou une enceinte se réduisent à
     // un rectangle. De trois quarts, on lit tout de suite l'objet.
-    <group rotation={[PERI_SHOT[id as PeripheralModelId]?.tilt ?? 0, -0.5, 0]}>
+    <group rotation={[shotOpts.tilt ?? 0, shotOpts.rot ? 0 : -0.5, 0]}>
       <PeriShowcase
         id={id as PeripheralModelId}
         spin={0}
-        target={PERI_SHOT[id as PeripheralModelId]?.target ?? 19}
+        target={shotOpts.target ?? 19}
+        rot={shotOpts.rot}
         y={0}
         pedestal={false}
       />
@@ -139,6 +155,8 @@ function Photographer() {
 }
 
 let frames = 0
+/** Indice de la pièce à laquelle `frames` se rapporte. */
+let framesFor = -1
 
 /**
  * Le studio : un canvas hors écran, monté seulement le temps des photos.
@@ -158,6 +176,7 @@ export function ThumbnailStudio({ queue }: { queue: ShotId[] }) {
       return
     }
     frames = 0
+    framesFor = -1
     useThumbs.setState({ queue: stable, index: 0 })
   }, [stable])
 
