@@ -13,7 +13,7 @@ import { useMemo } from 'react'
 import { Instance, Instances } from '@react-three/drei'
 import type { Vec3 } from '../layout'
 import { M } from '../materials'
-import { labelTexture } from '../textures'
+import { ihsTexture, labelTexture } from '../textures'
 import { FanUnit, Fins, GoldFingers } from './primitives'
 
 /* ================================================================ */
@@ -21,6 +21,7 @@ import { FanUnit, Fins, GoldFingers } from './primitives'
 /* ================================================================ */
 
 export function Cpu({ size = 4.0 }: { size?: number }) {
+  const ihsMap = useMemo(() => ihsTexture(), [])
   const pads = useMemo(() => {
     const arr: Vec3[] = []
     const n = 17
@@ -58,14 +59,17 @@ export function Cpu({ size = 4.0 }: { size?: number }) {
         <boxGeometry args={[0.17, size - 1.05, size - 0.75]} />
       </mesh>
 
-      {/* Gravure laser sur le capot */}
-      <mesh position={[0.2, 0.35, 0]}>
-        <boxGeometry args={[0.01, 0.5, size - 1.6]} />
-        <meshStandardMaterial color="#8f959e" roughness={0.7} metalness={0.8} />
-      </mesh>
-      <mesh position={[0.2, -0.4, 0]}>
-        <boxGeometry args={[0.01, 0.3, size - 2.2]} />
-        <meshStandardMaterial color="#8f959e" roughness={0.7} metalness={0.8} />
+      {/* Gravure laser du capot : références du processeur, écrites en clair
+          (et non plus deux barres). Plan appliqué sur la face supérieure. */}
+      <mesh position={[0.205, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[size - 0.9, size - 1.15]} />
+        <meshStandardMaterial
+          map={ihsMap}
+          transparent
+          depthWrite={false}
+          metalness={0.6}
+          roughness={0.5}
+        />
       </mesh>
 
       {/* Triangle doré = repère d'orientation (à faire correspondre au socket) */}

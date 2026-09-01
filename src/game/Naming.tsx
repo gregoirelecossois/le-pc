@@ -7,8 +7,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { COMPONENTS, soloName, type ComponentId } from '@/data/components'
 import type { PartId } from '@/three/models'
 import { Showcase } from '@/three/Showcase'
-import { Btn } from '@/ui/bits'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback } from './Frame'
+import { Btn, Modal } from '@/ui/bits'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 import { create } from 'zustand'
@@ -64,12 +64,28 @@ export function NamingUi() {
   const { order, index, revealed } = useNaming()
   const [result, setResult] = useState<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
   const [wrong, setWrong] = useState<string | null>(null)
+  /** L'élève a-t-il déjà dû recommencer ? (alors on recommence à la 4ᵉ erreur) */
+  const [retried, setRetried] = useState(false)
+  /** Trop d'erreurs : on propose de recommencer. */
+  const [over, setOver] = useState(false)
+  /** Nombre d'erreurs qui déclenche le recommencement (3, puis 4 après reprise). */
+  const limit = retried ? 4 : 3
 
   useEffect(() => {
     const list = shuffle(POOL)
     useNaming.setState({ order: list, index: 0, revealed: false })
     useExercise.getState().begin('nommer', list.length)
   }, [])
+
+  const restart = () => {
+    setRetried(true)
+    setOver(false)
+    setWrong(null)
+    const list = shuffle(POOL)
+    useNaming.setState({ order: list, index: 0, revealed: false })
+    useExercise.getState().begin('nommer', list.length)
+    useExercise.getState().play()
+  }
 
   const current = order[index]
 
@@ -93,13 +109,28 @@ export function NamingUi() {
     } else {
       setWrong(label)
       useNaming.setState({ revealed: true })
+      // La correction est montrée d'abord ; à sa fermeture, si le nombre
+      // d'erreurs est atteint, on repart de zéro (voir `next`).
+      const reached = useExercise.getState().mistakes + 1 >= limit
       useExercise
         .getState()
-        .bad('Pas tout à fait…', `C'est « ${good} ». ${c.analogy}`, { part: current, onDismiss: next })
+        .bad(
+          reached ? 'Trop d’erreurs' : 'Pas tout à fait…',
+          reached
+            ? `C'est « ${good} ». Ça fait ${limit} erreurs : on va recommencer le quiz depuis le début.`
+            : `C'est « ${good} ». ${c.analogy}`,
+          { part: current, onDismiss: next },
+        )
     }
   }
 
   const next = () => {
+    // On recommence DÈS que le nombre d'erreurs est atteint, sans attendre
+    // la fin du chapitre.
+    if (useExercise.getState().mistakes >= limit) {
+      setOver(true)
+      return
+    }
     const s = useNaming.getState()
     if (s.index + 1 >= s.order.length) {
       setResult(useExercise.getState().finish())
@@ -164,7 +195,23 @@ export function NamingUi() {
         </div>
       )}
 
-      <Feedback />
+      {over && (
+        <Modal>
+          <div className="end-head">
+            <h2 className="end-title">Trop d'erreurs — on recommence</h2>
+          </div>
+          <p className="intro-goal">
+            Tu as fait {limit} erreurs. Ce n'est pas grave : on reprend le quiz depuis le
+            début. Prends le temps de bien observer chaque pièce sous tous les angles avant
+            de répondre.
+          </p>
+          <div className="modal-actions">
+            <Btn variant="primary" size="lg" onClick={restart}>
+              Recommencer le chapitre
+            </Btn>
+          </div>
+        </Modal>
+      )}
       <ExerciseEnd result={result} />
     </>
   )

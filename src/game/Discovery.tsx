@@ -12,11 +12,12 @@ import { COMPONENTS, COMPONENT_IDS, type ComponentId } from '@/data/components'
 import { useGame } from '@/state/useGame'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
+import { IntroCinematic, INTRO_TOTAL_MS } from '@/three/IntroCinematic'
 import { asPart } from '@/three/models'
 import type { CameraViewId } from '@/three/layout'
 import { InfoCard } from '@/ui/InfoCard'
 import { Btn } from '@/ui/bits'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, Feedback } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -58,7 +59,7 @@ export function discoverPart(id: ComponentId) {
   if (markFound(id)) {
     const c = COMPONENTS[id]
     useExercise.getState().good(c.name, c.acronym ? `On dit aussi « ${c.acronym} ». ${c.role}` : c.role, {
-      part: asPart(id),
+      part: id === 'case' ? 'case' : asPart(id),
       step: 0, // la progression est tenue par `markFound`
       onDismiss: () => setBuild({ selected: id }),
     })
@@ -69,16 +70,20 @@ export function discoverPart(id: ComponentId) {
 
 export function DiscoveryScene() {
   const phase = useExercise((s) => s.phase)
+  const busy = useExercise((s) => s.busy)
   const found = useFound((s) => s.found)
   const flash = useHint((s) => s.flash)
   return (
-    <PcRig
-      interactive={phase === 'play'}
-      onPartClick={discoverPart}
-      highlights={flash}
-      // seules les pièces déjà trouvées portent leur nom en 3D
-      labelOnly={found}
-    />
+    <>
+      <PcRig
+        interactive={phase === 'play' && !busy}
+        onPartClick={discoverPart}
+        highlights={flash}
+        // seules les pièces déjà trouvées portent leur nom en 3D
+        labelOnly={found}
+      />
+      {phase === 'play' && <IntroCinematic />}
+    </>
   )
 }
 
@@ -119,13 +124,30 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
     }
   }, [found.length, ex.phase, result])
 
+  // Garde-fou : la cinématique d'intro rend la main même si l'animation cale.
+  useEffect(() => {
+    if (!ex.busy) return
+    const t = setTimeout(() => {
+      if (useExercise.getState().busy) {
+        useExercise.getState().setBusy(false)
+        useBuild.getState().set({ camLock: false, explode: 0 })
+      }
+    }, INTRO_TOTAL_MS + 900)
+    return () => clearTimeout(t)
+  }, [ex.busy])
+
   const remaining = COMPONENT_IDS.filter((id) => !found.includes(id))
 
   return (
     <>
       <ExerciseBar showTimer={false} />
 
-      <ExerciseIntro onStart={() => onView('overview')}>
+      <ExerciseIntro
+        onStart={() => {
+          useExercise.getState().setBusy(true)
+          onView('overview')
+        }}
+      >
         <div className="intro-tips">
           <div>
             <b>🖱️ Clic gauche</b> pivoter autour de la machine
@@ -142,7 +164,13 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
         </div>
       </ExerciseIntro>
 
-      {ex.phase === 'play' && (
+      {ex.phase === 'play' && ex.busy && (
+        <div className="hintbar">
+          <span>🎬</span> Petit tour d'horizon de la machine…
+        </div>
+      )}
+
+      {ex.phase === 'play' && !ex.busy && (
         <>
           <ExplodeSlider />
 
@@ -219,9 +247,7 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
             </div>
           )}
         </>
-      )}
-
-      <Feedback />
+      )}
       <ExerciseEnd result={result} />
     </>
   )

@@ -178,13 +178,13 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     name: 'Le ventirad (refroidissement du processeur)',
     shortName: 'Ventirad',
     category: 'refroidissement',
-    role: "Il évacue la chaleur produite par le processeur. Sans lui, le processeur atteindrait 100 °C en quelques secondes et se mettrait en sécurité.",
+    role: "C'est un VENTILATEUR posé sur un DISSIPATEUR THERMIQUE (un radiateur à ailettes). Le dissipateur étale la chaleur du processeur, le ventilateur la souffle dehors. Sans lui, le processeur atteindrait 100 °C en quelques secondes et se mettrait en sécurité.",
     analogy:
-      "Le radiateur et le ventilateur d'une voiture : les ailettes étalent la chaleur, le ventilateur la souffle dehors.",
+      "Le radiateur et le ventilateur d'une voiture : le dissipateur (les ailettes) étale la chaleur, le ventilateur la souffle dehors.",
     details: [
-      '« Ventirad » = VENTIlateur + RADiateur. Les ailettes en aluminium multiplient la surface de contact avec l\'air.',
-      'Entre le processeur et le radiateur, on met une noisette de pâte thermique pour combler les micro-trous.',
-      'Son câble à 4 broches se branche sur le connecteur CPU_FAN de la carte mère.',
+      '« Ventirad » = VENTIlateur + RADiateur : un dissipateur thermique en aluminium dont les ailettes multiplient la surface de contact avec l\'air, surmonté d\'un ventilateur.',
+      'Entre le processeur et le dissipateur, on met une noisette de pâte thermique pour combler les micro-trous.',
+      'Le câble du ventilateur, à 4 broches, se branche sur le connecteur CPU_FAN de la carte mère.',
     ],
     handling: 'On visse les 4 fixations en croix (une diagonale, puis l\'autre) pour appuyer bien à plat sur le processeur.',
     funFact:
@@ -245,19 +245,19 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
 
   ssd: {
     id: 'ssd',
-    name: 'Le SSD (M.2 NVMe)',
-    shortName: 'SSD',
+    name: 'Le SSD M.2 NVMe',
+    shortName: 'SSD M.2',
     category: 'stockage',
-    role: "C'est la mémoire de stockage rapide : il conserve le système d'exploitation, les logiciels et les fichiers, même éteint.",
+    role: "C'est la mémoire de stockage rapide : il conserve le système d'exploitation, les logiciels et les fichiers, même éteint. Le format M.2 NVMe est le plus récent et le plus rapide des SSD.",
     analogy: 'Une immense clé USB ultra-rapide vissée directement sur la carte mère.',
     details: [
       'Il n\'a AUCUNE pièce mobile : c\'est de la mémoire flash, comme dans un téléphone.',
-      'Le format M.2 se glisse en biais dans son connecteur puis se visse à plat : pas besoin de câble !',
+      'C\'est le format de SSD le plus récent et le plus rapide : il se visse directement sur la carte mère (M.2) sans aucun câble, et communique en PCIe NVMe.',
       'Il démarre Windows en 10 secondes, contre plus d\'une minute avec un disque dur mécanique.',
     ],
     handling:
       'On l\'insère à environ 30°, puis on l\'abaisse et on serre la petite vis. Cette vis est minuscule : attention à ne pas la perdre.',
-    funFact: 'Un SSD NVMe lit jusqu\'à 7 Go par seconde : il copierait un film HD en moins d\'une seconde.',
+    funFact: 'Un SSD M.2 NVMe lit jusqu\'à 7 Go par seconde : il copierait un film HD en moins d\'une seconde, soit 5 fois plus vite qu\'un SSD SATA.',
     installOrder: 7,
     requires: ['motherboard'],
     requiresHint: 'Le SSD M.2 se visse sur la carte mère : installe-la d\'abord.',
@@ -292,13 +292,13 @@ export const COMPONENTS: Record<ComponentId, PcComponent> = {
     name: 'Le SSD 2,5 pouces (SATA)',
     shortName: 'SSD 2,5"',
     category: 'stockage',
-    role: "C'est un SSD au format d'un petit disque : même mémoire flash que le M.2, mais dans un boîtier plat relié par deux câbles.",
+    role: "C'est un SSD au format d'un petit disque : même mémoire flash que le M.2 NVMe, mais dans un boîtier plat relié par deux câbles. C'est un format plus ancien et moins rapide que le M.2 NVMe.",
     analogy:
       "Le même cerveau de stockage que le M.2, rangé dans une boîte à chaussures au lieu d'être collé à la carte mère.",
     details: [
       "Il mesure 2,5 pouces (7 cm de large), l'ancien format des disques d'ordinateur portable.",
       'Comme le disque dur, il demande DEUX câbles : SATA données + SATA alimentation.',
-      "Il est 4 à 5 fois plus lent qu'un M.2 NVMe, mais toujours 10 fois plus rapide qu'un disque dur mécanique.",
+      "Il est 4 à 5 fois plus lent qu'un SSD M.2 NVMe (le format le plus récent et le plus rapide), mais toujours 10 fois plus rapide qu'un disque dur mécanique.",
     ],
     handling:
       "On le visse à plat dans son berceau, ou on le glisse dans un tiroir. Aucun risque de choc : il n'a pas de pièce mobile.",

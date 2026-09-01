@@ -34,7 +34,7 @@ export const BADGES: Badge[] = [
   { id: 'chrono', icon: '⏱️', name: 'Contre la montre', how: 'Terminer le défi en moins de 3 minutes', color: '#f43f5e' },
   { id: 'sans-indice', icon: '🕶️', name: 'Sans filet', how: 'Terminer un chapitre sans demander d\'indice', color: '#c084fc' },
   { id: 'perfectionniste', icon: '⭐', name: 'Perfectionniste', how: 'Obtenir 3 étoiles à tous les chapitres', color: '#fbbf24' },
-  { id: 'certifie', icon: '🏅', name: 'Technicien·ne certifié·e', how: 'Terminer les 9 chapitres', color: '#22d3ee' },
+  { id: 'certifie', icon: '🏅', name: 'Technicien·ne certifié·e', how: 'Terminer tous les chapitres du parcours', color: '#22d3ee' },
 ]
 
 export const BADGE_BY_ID = Object.fromEntries(BADGES.map((b) => [b.id, b])) as Record<BadgeId, Badge>

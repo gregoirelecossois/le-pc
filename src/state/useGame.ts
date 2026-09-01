@@ -186,7 +186,7 @@ export const useGame = create<GameState>()(
           reperer: 'oeil-de-lynx',
           roles: 'pedagogue',
           cablage: 'electricien',
-          peripheriques: 'connecteur',
+          branchement: 'connecteur',
           demontage: 'demonteur',
         }
         const badge = perChapter[c]
@@ -205,7 +205,21 @@ export const useGame = create<GameState>()(
     }),
     {
       name: 'le-pc-progression',
-      version: 1,
+      version: 2,
+      /**
+       * v1 -> v2 : le chapitre 7 « Les périphériques » a été scindé en deux
+       * (« Nomme les périphériques » = peripheriques, « Branche les
+       * périphériques » = branchement). Un parcours déjà terminé sous v1
+       * avait fait les deux d'un coup : on reporte la réussite sur le
+       * nouveau chapitre pour ne pas re-verrouiller la suite.
+       */
+      migrate: (state: unknown, version: number) => {
+        const s = state as GameState
+        if (version < 2 && s?.results?.peripheriques?.done && !s.results.branchement) {
+          s.results = { ...s.results, branchement: { ...s.results.peripheriques } }
+        }
+        return s
+      },
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({
         pseudo: s.pseudo,

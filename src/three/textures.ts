@@ -305,6 +305,68 @@ export function labelTexture(spec: LabelSpec, key: string): THREE.Texture {
 }
 
 /* --------------------------------------------------------------- */
+/*  Halo doux (dégradé radial) — survol des pièces du chapitre 4     */
+/* --------------------------------------------------------------- */
+
+export function glowTexture(): THREE.Texture {
+  return cached('glow', () => {
+    const s = 256
+    const { c, ctx } = makeCanvas(s, s)
+    const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2)
+    g.addColorStop(0, 'rgba(255,255,255,0.95)')
+    g.addColorStop(0.35, 'rgba(255,255,255,0.45)')
+    g.addColorStop(0.7, 'rgba(255,255,255,0.10)')
+    g.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, s, s)
+    const t = toTexture(c, true)
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping
+    return t
+  })
+}
+
+/* --------------------------------------------------------------- */
+/*  Gravure laser du capot du processeur (IHS)                      */
+/* --------------------------------------------------------------- */
+
+/**
+ * Texte gravé sur le dessus du processeur : fond transparent, caractères
+ * gris peu contrastés, comme une vraie gravure laser sur le métal du
+ * capot. Remplace les deux barres qui figuraient la gravure auparavant.
+ */
+export function ihsTexture(): THREE.Texture {
+  return cached('ihs', () => {
+    const w = 640
+    const h = 480
+    const { c, ctx } = makeCanvas(w, h)
+    ctx.clearRect(0, 0, w, h)
+
+    ctx.fillStyle = 'rgba(150,156,166,0.6)'
+    ctx.strokeStyle = 'rgba(120,127,138,0.4)'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    ctx.font = 'bold 52px "Arial Narrow", Arial, sans-serif'
+    ctx.fillText('CORE  M-13', w / 2, h * 0.16)
+
+    ctx.font = '34px "Courier New", monospace'
+    ctx.fillText('SR3LN   2930-04', w / 2, h * 0.34)
+    ctx.fillText('3.80GHZ / 8M / 6.40', w / 2, h * 0.48)
+    ctx.fillText('L  453018295  MALAY', w / 2, h * 0.62)
+
+    ctx.font = '24px "Courier New", monospace'
+    ctx.fillText('e4  (m)(c)  S2  ·  1.5V', w / 2, h * 0.78)
+
+    ctx.lineWidth = 3
+    ctx.strokeRect(w * 0.05, h * 0.05, w * 0.9, h * 0.9)
+
+    const t = toTexture(c, true)
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping
+    return t
+  })
+}
+
+/* --------------------------------------------------------------- */
 /*  Écran allumé (bureau simplifié) pour le périphérique « écran »   */
 /* --------------------------------------------------------------- */
 

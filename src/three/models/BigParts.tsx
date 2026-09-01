@@ -282,11 +282,23 @@ export function Psu({ fanSpeed = 0, showCables = true }: { fanSpeed?: number; sh
         </group>
       </group>
 
-      {/* Faisceau de câbles sortant vers l'avant */}
+      {/* Passe-fil : le « cercle » d'où sortent tous les câbles vers l'avant.
+          Bien visible, c'est le point de départ de l'exercice de câblage. */}
       {showCables && (
-        <group position={[0, 0, -d / 2 - 0.4]}>
+        <group position={[0, 0, -d / 2 - 0.3]}>
+          {/* collerette caoutchouc */}
           <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-            <cylinderGeometry args={[1.5, 1.7, 0.9, 14]} />
+            <cylinderGeometry args={[2.3, 2.5, 1.0, 20]} />
+            <meshStandardMaterial color="#0a0b0e" roughness={0.9} />
+          </mesh>
+          {/* jonc clair sur le pourtour, pour lire le cercle de loin */}
+          <mesh position={[0, 0, -0.55]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[2.35, 0.16, 8, 28]} />
+            <meshStandardMaterial color="#3a3f47" roughness={0.6} metalness={0.4} />
+          </mesh>
+          {/* amorce de faisceau qui dépasse du trou */}
+          <mesh position={[0, 0, -0.8]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[1.5, 1.7, 1.4, 14]} />
             <meshStandardMaterial color="#0a0b0e" roughness={0.88} />
           </mesh>
         </group>

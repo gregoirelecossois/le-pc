@@ -9,7 +9,9 @@ import { useGame } from '@/state/useGame'
 import { useBuild } from '@/state/useBuild'
 import { Btn, Counter, Modal, Stars, fmtTime } from '@/ui/bits'
 import { PartSpinner } from '@/three/PartSpinner'
+import { SpeakButton } from '@/ui/speak'
 import { useExercise } from './useExercise'
+import { useFbView } from './fbView'
 import { sfx } from '@/audio/sfx'
 
 /**
@@ -125,6 +127,7 @@ export function ExerciseIntro({ children, onStart }: { children?: ReactNode; onS
           </div>
           <h2 className="intro-title">{ch.title}</h2>
         </div>
+        <SpeakButton className="speakbtn-head" text={[ch.goal, `Objectif : ${ch.objective}`]} />
       </div>
 
       <p className="intro-goal">{ch.goal}</p>
@@ -179,9 +182,27 @@ const FB_LABEL = {
  * une phrase d'explication, et rien ne bouge tant que « J'ai compris »
  * n'a pas été cliqué.
  */
+/**
+ * Fenêtre de correction.
+ *
+ * Elle est montée UNE FOIS au niveau de l'application (voir App). Son petit
+ * rendu 3D vit donc pour toute la session : le contexte WebGL est créé au
+ * préchargement du lancement, et une correction s'ouvre ensuite
+ * instantanément, sans « saut » ni temps de chargement.
+ */
 export function Feedback() {
   const fb = useExercise((s) => s.feedback)
   const clear = useExercise((s) => s.clearFeedback)
+  const view = useFbView()
+
+  // La pièce affichée suit la correction courante.
+  useEffect(() => {
+    if (fb && (fb.part || fb.peri)) {
+      useFbView.setState({ part: fb.part ?? null, peri: fb.peri ?? null, spin: 0.2 })
+    } else if (!fb) {
+      useFbView.setState({ spin: 0 })
+    }
+  }, [fb])
 
   // La touche Entrée (ou Espace) ferme aussi : plus rapide au clavier.
   useEffect(() => {
@@ -196,36 +217,50 @@ export function Feedback() {
     return () => window.removeEventListener('keydown', h)
   }, [fb, clear])
 
-  if (!fb) return null
-  const l = FB_LABEL[fb.kind]
+  const l = fb ? FB_LABEL[fb.kind] : null
+  // Le canvas reste dans le DOM tant que la session dure (contexte chaud).
+  const mountSpinner = view.warming || view.warmed
+  // …mais il n'occupe de la place à l'écran que lorsqu'une correction
+  // montre vraiment une pièce (sinon les fenêtres du ch. 6 étaient trop
+  // grandes, avec un vide à la place du visuel).
+  const showPiece = view.warming || !!(fb && (fb.part || fb.peri))
+
+  if (!fb && !mountSpinner) return null
 
   return (
-    <div className="modal-back fb-back" onClick={clear}>
+    <div className={`modal-back fb-back ${fb ? '' : 'fb-idle'}`} onClick={fb ? clear : undefined}>
       <div
-        key={fb.seq}
-        className={`fb card pop-in fb-${fb.kind}`}
+        className={`fb card ${fb ? `fb-${fb.kind}` : ''}`}
         role="alertdialog"
-        aria-modal="true"
+        aria-modal={fb ? 'true' : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        {(fb.part || fb.peri) && (
-          <div className="fb-view">
-            <PartSpinner id={fb.part} peri={fb.peri} />
+        {mountSpinner && (
+          <div className={`fb-view ${showPiece ? '' : 'fb-view-off'}`}>
+            <PartSpinner id={view.part} peri={view.peri} spin={view.spin} />
           </div>
         )}
 
-        <div className="fb-body">
-          <div className="fb-kind">
-            <span className="fb-icon">{l.icon}</span>
-            {l.word}
-          </div>
-          <h2 className="fb-title">{fb.title}</h2>
-          {fb.text && <p className="fb-text">{fb.text}</p>}
+        {fb && l && (
+          <div key={fb.seq} className="fb-body pop-soft">
+            <SpeakButton className="speakbtn-fb" text={[fb.title, fb.text ?? '']} />
+            <div className="fb-kind">
+              <span className="fb-icon">{l.icon}</span>
+              {fb.word ?? l.word}
+            </div>
+            <h2 className="fb-title">{fb.title}</h2>
+            {fb.text && <p className="fb-text">{fb.text}</p>}
 
-          <Btn variant={fb.kind === 'bad' ? 'gold' : 'primary'} size="lg" className="fb-go" onClick={clear}>
-            J'ai compris
-          </Btn>
-        </div>
+            <Btn
+              variant={fb.kind === 'bad' ? 'gold' : 'primary'}
+              size="lg"
+              className="fb-go"
+              onClick={clear}
+            >
+              J'ai compris
+            </Btn>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -254,9 +289,12 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
   const nextIdx = ch.n // les chapitres sont numérotés à partir de 1
   const next = Object.values(CHAPTER_BY_ID).find((c) => c.n === nextIdx + 1)
   const nextUnlocked = next && (!next.requires || results[next.requires]?.done)
+  // Le défi clôt le parcours : sa fin mène à la leçon, pas à la carte.
+  const isChallenge = ex.chapter === 'defi'
 
-  const msg =
-    result.stars === 3
+  const msg = isChallenge
+    ? 'Félicitations, tu as terminé tout le parcours !'
+    : result.stars === 3
       ? 'Parfait, sans la moindre erreur !'
       : result.stars === 2
         ? 'Très bien. Encore un essai pour la troisième étoile ?'
@@ -294,27 +332,42 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
       </div>
 
       <div className="modal-actions">
-        {next && nextUnlocked && (
+        {isChallenge ? (
           <Btn
             variant="primary"
             size="lg"
             onClick={() => {
               useBuild.getState().resetBuild()
-              openChapter(next.id)
+              go('fiche')
             }}
           >
-            Chapitre suivant : {next.title} →
+            💾 Enregistre tes scores et ta leçon
           </Btn>
+        ) : (
+          <>
+            {next && nextUnlocked && (
+              <Btn
+                variant="primary"
+                size="lg"
+                onClick={() => {
+                  useBuild.getState().resetBuild()
+                  openChapter(next.id)
+                }}
+              >
+                Chapitre suivant : {next.title} →
+              </Btn>
+            )}
+            <Btn
+              variant="ghost"
+              onClick={() => {
+                useBuild.getState().resetBuild()
+                go('carte')
+              }}
+            >
+              Retour au parcours
+            </Btn>
+          </>
         )}
-        <Btn
-          variant="ghost"
-          onClick={() => {
-            useBuild.getState().resetBuild()
-            go('carte')
-          }}
-        >
-          Retour au parcours
-        </Btn>
       </div>
     </Modal>
   )
@@ -333,26 +386,40 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
  * machine MONTÉE : c'est l'élève qui écarte les pièces quand il en a
  * besoin, et le geste doit donc sauter aux yeux.
  */
-export function ExplodeSlider() {
+export function ExplodeSlider({
+  left,
+  right,
+  wide = false,
+}: {
+  /** Bouton posé à gauche du curseur (démontage : « Éteindre ») */
+  left?: ReactNode
+  /** Bouton posé à droite du curseur (démontage : « Débrancher ») */
+  right?: ReactNode
+  wide?: boolean
+} = {}) {
   const explode = useBuild((s) => s.explode)
   const setBuild = useBuild((s) => s.set)
 
   return (
-    <div className="explodebar card">
+    <div className={`explodebar card ${wide ? 'explodebar-wide' : ''}`}>
       <div className="explodebar-head">
         <span className="explodebar-icon">🎚️</span>
         <b>Vue éclatée</b>
         <span className="explodebar-pct">{Math.round(explode * 100)} %</span>
       </div>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={explode}
-        aria-label="Écarter les pièces de la machine"
-        onChange={(e) => setBuild({ explode: +e.target.value })}
-      />
+      <div className="explodebar-row">
+        {left}
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={explode}
+          aria-label="Écarter les pièces de la machine"
+          onChange={(e) => setBuild({ explode: +e.target.value })}
+        />
+        {right}
+      </div>
       <div className="explodebar-ends">
         <span>Machine montée</span>
         <span>Pièces écartées</span>

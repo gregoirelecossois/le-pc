@@ -702,8 +702,8 @@ button {
 .map-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
   align-content: start;
   padding-right: 6px;
 }
@@ -719,7 +719,7 @@ button {
 .chapcard {
   --chap: var(--accent);
   text-align: left;
-  padding: 16px 17px;
+  padding: 20px 22px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
@@ -749,46 +749,46 @@ button {
 .chapcard.done::after {
   content: '✓';
   position: absolute;
-  top: 12px;
-  right: 14px;
+  top: 14px;
+  right: 16px;
   color: var(--ok);
   font-weight: 800;
-  font-size: 16px;
+  font-size: 18px;
 }
 .chapcard-top {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 11px;
+  margin-bottom: 12px;
 }
 .chapcard-n {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--chap);
   border: 1px solid var(--chap);
   border-radius: 6px;
-  padding: 1px 6px;
+  padding: 2px 7px;
 }
 .chapcard-icon {
-  font-size: 21px;
+  font-size: 27px;
 }
 .chapcard-title {
-  font-size: 16.5px;
+  font-size: 19px;
   font-weight: 700;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 .chapcard-sub {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--fg-dim);
-  line-height: 1.35;
-  min-height: 34px;
+  line-height: 1.4;
+  min-height: 40px;
 }
 .chapcard-foot {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-top: 12px;
-  font-size: 11.5px;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
 }
 
 /* ================================================================
@@ -798,13 +798,13 @@ button {
 .badge-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 13px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 15px;
   align-content: start;
 }
 .badgecard {
   --bc: var(--accent);
-  padding: 18px 15px;
+  padding: 22px 18px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.03);
@@ -820,21 +820,21 @@ button {
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
 }
 .badgecard-icon {
-  font-size: 34px;
-  margin-bottom: 8px;
+  font-size: 44px;
+  margin-bottom: 10px;
 }
 .badgecard-name {
   font-weight: 700;
-  font-size: 14.5px;
-  margin-bottom: 5px;
+  font-size: 17px;
+  margin-bottom: 6px;
 }
 .badgecard.got .badgecard-name {
   color: var(--bc);
 }
 .badgecard-how {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--fg-faint);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 /* ---------------- Accès enseignant ---------------- */

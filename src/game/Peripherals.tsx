@@ -35,7 +35,8 @@ import {
 } from '@/three/models/PeripheralParts'
 import { PLUGS, Plug } from '@/three/models/Plugs'
 import { Btn } from '@/ui/bits'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
+import { SpeakButton } from '@/ui/speak'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -379,14 +380,14 @@ function cableStart(id: PeripheralModelId): Vec3 {
 /*  Scène                                                            */
 /* ================================================================ */
 
-export function PeripheralsScene() {
+export function PeripheralsScene({ part = 1 }: { part?: 1 | 2 }) {
   const phase = useExercise((s) => s.phase)
-  const { round, order, index, snap, wrongPort, okPort, flashPort, done } = usePeri()
+  const { order, index, snap, wrongPort, okPort, flashPort, done } = usePeri()
   const current = order[index]
   const handle = useRef<THREE.Group>(null)
 
-  /* ---- Manche 1 : le présentoir ---- */
-  if (round === 1) {
+  /* ---- Manche 1 (chapitre « Nomme les périphériques ») : le présentoir ---- */
+  if (part === 1) {
     if (!current) return null
     return <PeriShowcase id={current.id} />
   }
@@ -477,19 +478,27 @@ export function PeripheralsScene() {
 /*  Interface                                                        */
 /* ================================================================ */
 
-const TOTAL = PERIPHERALS.length * 3
+/** Manche 1 : nom + entrée/sortie ; manche 2 : un branchement par périphérique. */
+const TOTAL_NAME = PERIPHERALS.length * 2
+const TOTAL_PLUG = PERIPHERALS.length
 
-export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'branchement' | 'rear') => void }) {
+export function PeripheralsUi({
+  part = 1,
+  onView,
+}: {
+  part?: 1 | 2
+  onView?: (v: 'showcase' | 'branchement' | 'rear') => void
+}) {
   const ex = useExercise()
-  const { round, order, index, step, revealed, wrongName, finished } = usePeri()
+  const { order, index, step, revealed, wrongName, finished, done } = usePeri()
   const [result, setResult] = useState<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
   const ready = useReady()
   const current = order[index]
 
   useEffect(() => {
     usePeri.setState({
-      round: 1,
-      order: shuffle(PERIPHERALS),
+      round: part,
+      order: part === 1 ? shuffle(PERIPHERALS) : [...PERIPHERALS],
       index: 0,
       step: 'name',
       revealed: false,
@@ -501,20 +510,51 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
       done: {},
       finished: false,
     })
-    useExercise.getState().begin('peripheriques', TOTAL)
+    useExercise.getState().begin(
+      part === 1 ? 'peripheriques' : 'branchement',
+      part === 1 ? TOTAL_NAME : TOTAL_PLUG,
+    )
     useBuild.getState().resetBuild(ALL_INSTALLED)
-    useBuild.getState().set({ explode: 0, labels: false, running: true, powered: true, handDrag: false })
-  }, [])
+    // Manche 2 : la machine est éteinte tant que le câble secteur n'est pas
+    // branché — les ventilateurs ne tournent pas.
+    useBuild.getState().set({
+      explode: 0,
+      labels: false,
+      running: part === 1,
+      powered: part === 1,
+      handDrag: false,
+      celebrate: false,
+    })
+  }, [part])
 
-  // Chaque manche a son cadrage.
+  // Cadrage propre à la manche.
   useEffect(() => {
     if (ex.phase !== 'play') return
-    onView?.(round === 1 ? 'showcase' : 'branchement')
-  }, [round, ex.phase, onView])
+    onView?.(part === 1 ? 'showcase' : 'branchement')
+  }, [part, ex.phase, onView])
 
+  // Manche 2 : dès que le câble secteur est branché, le PC s'allume.
   useEffect(() => {
-    if (ready && finished && !result) setResult(useExercise.getState().finish())
-  }, [ready, finished, result])
+    if (part !== 2) return
+    if (done['power']) useBuild.getState().set({ running: true, powered: true })
+  }, [part, done])
+
+  // Fin d'atelier. En manche 2, on laisse tourner la machine et la vue
+  // pivoter quelques secondes avant l'écran de réussite.
+  useEffect(() => {
+    if (!ready || !finished || result) return
+    if (part !== 2) {
+      setResult(useExercise.getState().finish())
+      return
+    }
+    useBuild.getState().set({ running: true, powered: true, celebrate: true })
+    sfx.boot()
+    const t = setTimeout(() => {
+      useBuild.getState().set({ celebrate: false })
+      setResult(useExercise.getState().finish())
+    }, 4200)
+    return () => clearTimeout(t)
+  }, [ready, finished, result, part])
 
   /* ---------------- Manche 1 : identifier ---------------- */
 
@@ -546,17 +586,9 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
     const last = s.index + 1 >= s.order.length
     const next = () => {
       if (last) {
-        // On enchaîne sur la manche du branchement
-        useExercise
-          .getState()
-          .info(
-            '2ᵉ partie : le branchement',
-            "Chaque périphérique arrive maintenant avec son câble. Attrape la FICHE au bout du câble et dépose-la sur la bonne prise, à l'arrière de l'unité centrale.",
-            {
-              onDismiss: () =>
-                usePeri.setState({ round: 2, order: [...PERIPHERALS], index: 0, step: 'name' }),
-            },
-          )
+        // Dernier périphérique nommé et classé : le chapitre est terminé
+        // (le branchement fait l'objet d'un chapitre à part).
+        usePeri.setState({ finished: true })
       } else {
         usePeri.setState({ index: s.index + 1, step: 'name', revealed: false, wrongName: null })
       }
@@ -665,7 +697,7 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
     if (!current) return
     const exs = useExercise.getState()
     exs.hint()
-    if (round === 1) {
+    if (part === 1) {
       exs.info(
         step === 'name' ? 'Indice' : 'Entrée ou sortie ?',
         step === 'name'
@@ -683,30 +715,49 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
     })
   }
 
-  const stepNo = round === 1 ? (step === 'name' ? 1 : 2) : 3
+  const stepNo = step === 'name' ? 1 : 2
   // Le nom reste caché tant que la question « qui est-ce ? » n'a pas été jouée.
-  const hidden = round === 1 && step === 'name' && !revealed
+  const hidden = part === 1 && step === 'name' && !revealed
+
+  // Texte lu à voix haute pour le volet courant.
+  const speakText =
+    current && !hidden
+      ? part === 1
+        ? [current.name, current.role]
+        : [current.name, current.role, `Au bout du câble : ${current.plugName}.`, current.plugHint]
+      : ['']
 
   return (
     <>
       <ExerciseBar onHint={hint} />
-      <ExerciseIntro onStart={() => onView?.('showcase')}>
-        <div className="intro-tips">
-          <div>
-            <b>1️⃣ D'abord</b> tu reconnais le périphérique et tu dis s'il est en entrée ou en sortie
+      <ExerciseIntro onStart={() => onView?.(part === 1 ? 'showcase' : 'branchement')}>
+        {part === 1 ? (
+          <div className="intro-tips">
+            <div>
+              <b>🔄 La pièce tourne</b> observe-la, puis choisis son nom parmi les propositions
+            </div>
+            <div>
+              <b>➡️ Entrée ou sortie ?</b> demande-toi dans quel sens circule l'information
+            </div>
           </div>
-          <div>
-            <b>2️⃣ Ensuite</b> tu attrapes la fiche au bout de son câble…
+        ) : (
+          <div className="intro-tips">
+            <div>
+              <b>🖐️ Attrape la fiche</b> au bout du câble du périphérique
+            </div>
+            <div>
+              <b>🎯 Dépose-la</b> sur la bonne prise, à l'arrière de l'unité centrale
+            </div>
+            <div>
+              <b>🔌 Le câble secteur en dernier</b> tant qu'il n'est pas branché, rien ne s'allume
+            </div>
           </div>
-          <div>
-            <b>🖐️ …et tu la déposes</b> sur la bonne prise, à l'arrière de la machine
-          </div>
-        </div>
+        )}
       </ExerciseIntro>
 
       {ex.phase === 'play' && current && (
         <>
-          <div className="peri card">
+          <div className={`peri card ${part === 2 ? 'peri-wide' : ''}`}>
             <div className="peri-head">
               {/* Tant que le nom n'est pas trouvé, on ne le vend pas : ni
                   l'icône, ni le titre ne doivent trahir la réponse. */}
@@ -714,16 +765,17 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
               <div>
                 <h3 className="peri-name">{hidden ? 'Manche 1 — identifier' : current.name}</h3>
                 <p className="peri-role">
-                  {round === 1
+                  {part === 1
                     ? `Périphérique ${index + 1} / ${order.length}`
                     : `Branchement ${index + 1} / ${order.length}`}
                 </p>
               </div>
+              {!hidden && <SpeakButton className="speakbtn-head" text={speakText} />}
             </div>
 
-            {round === 1 && step === 'kind' && <p className="peri-role">{current.role}</p>}
+            {part === 1 && step === 'kind' && <p className="peri-role">{current.role}</p>}
 
-            {round === 2 && (
+            {part === 2 && (
               <>
                 <p className="peri-role" style={{ marginBottom: 12 }}>
                   {current.role}
@@ -742,28 +794,6 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
               </>
             )}
 
-            {round === 1 && step === 'kind' && (
-              <div className="peri-classify">
-                <b>C'est un périphérique…</b>
-                <div className="peri-kinds">
-                  {(['entree', 'sortie', 'entree-sortie'] as PeripheralKind[]).map((k) => (
-                    <button
-                      key={k}
-                      className="peri-kind"
-                      style={{ '--k': KIND_COLOR[k] } as React.CSSProperties}
-                      onClick={() => {
-                        sfx.click()
-                        answerKind(k)
-                      }}
-                    >
-                      <b>{KIND_LABEL[k]}</b>
-                      <span>{KIND_HELP[k]}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="peri-progress">
               {order.map((p, i) => (
                 <span
@@ -775,7 +805,7 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
             </div>
 
             <div className="tray-foot">
-              {round === 2 ? (
+              {part === 2 ? (
                 <>
                   <button className="btn btn-sm btn-ghost" onClick={() => onView?.('branchement')}>
                     Vue d'ensemble
@@ -785,12 +815,36 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
                   </button>
                 </>
               ) : (
-                <span className="faint">Étape {stepNo} / 3</span>
+                <span className="faint">Étape {stepNo} / 2</span>
               )}
             </div>
           </div>
 
-          {round === 1 && step === 'name' && (
+          {part === 1 && step === 'kind' && (
+            <div className="quiz kind-quiz">
+              <div className="quiz-q">
+                Ce périphérique est-il en entrée, en sortie, ou les deux&nbsp;?
+              </div>
+              <div className="kind-choices">
+                {(['entree', 'sortie', 'entree-sortie'] as PeripheralKind[]).map((k) => (
+                  <button
+                    key={k}
+                    className="kind-btn"
+                    style={{ '--k': KIND_COLOR[k] } as React.CSSProperties}
+                    onClick={() => {
+                      sfx.click()
+                      answerKind(k)
+                    }}
+                  >
+                    <b>{KIND_LABEL[k]}</b>
+                    <span>{KIND_HELP[k]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {part === 1 && step === 'name' && (
             <div className="quiz">
               <div className="quiz-q">Quel périphérique tourne sur le présentoir&nbsp;?</div>
               <div className="quiz-choices">
@@ -815,7 +869,7 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
             </div>
           )}
 
-          {round === 2 && (
+          {part === 2 && (
             <div className="hintbar">
               <span>🖐️</span> Attrape la fiche au bout du câble et dépose-la sur la bonne prise
               <Btn size="sm" variant="ghost" onClick={hint}>
@@ -825,8 +879,6 @@ export function PeripheralsUi({ onView }: { onView?: (v: 'showcase' | 'brancheme
           )}
         </>
       )}
-
-      <Feedback />
       <ExerciseEnd result={result} />
     </>
   )

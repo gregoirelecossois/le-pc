@@ -1,5 +1,6 @@
 import { CATEGORY_LABEL, COMPONENTS, type ComponentId } from '@/data/components'
 import { Btn } from './bits'
+import { SpeakButton } from './speak'
 
 export function InfoCard({
   id,
@@ -23,6 +24,16 @@ export function InfoCard({
           <h3 className="infocard-title">{c.name}</h3>
           {c.acronym && <span className="infocard-acronym">on dit aussi « {c.acronym} »</span>}
         </div>
+        <SpeakButton
+          className="speakbtn-head"
+          text={[
+            c.name,
+            c.role,
+            c.analogy,
+            ...c.details,
+            `Sur une vraie machine : ${c.handling}`,
+          ]}
+        />
         {onClose && (
           <button className="infocard-close" onClick={onClose} aria-label="Fermer la fiche">
             ×

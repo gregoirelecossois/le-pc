@@ -29,10 +29,21 @@ const NO_HIT: THREE.Mesh['raycast'] = () => null
 /**
  * Construit une courbe qui « tombe » entre les deux extrémités,
  * comme un vrai câble qui n'est pas tendu.
+ *
+ * Si des `waypoints` sont donnés, le câble suit ce circuit : c'est ce qui
+ * lui fait contourner les composants au lieu de les traverser (cable
+ * management du chapitre 6).
  */
-function cableCurve(from: Vec3, to: Vec3) {
+function cableCurve(from: Vec3, to: Vec3, waypoints?: Vec3[]) {
   const a = new THREE.Vector3(...from)
   const b = new THREE.Vector3(...to)
+
+  if (waypoints && waypoints.length) {
+    const pts = [a, ...waypoints.map((w) => new THREE.Vector3(...w)), b]
+    // tension basse : le câble suit de près ses points de passage
+    return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.08)
+  }
+
   const dist = a.distanceTo(b)
   const sag = Math.min(6, dist * 0.22)
 
@@ -59,8 +70,8 @@ export function Cable3D({
 }) {
   const to = CONNECTORS[cable.to].position
   const geo = useMemo(() => {
-    const curve = cableCurve(cable.from, to)
-    return new THREE.TubeGeometry(curve, 36, cable.thickness, 7, false)
+    const curve = cableCurve(cable.from, to, cable.waypoints)
+    return new THREE.TubeGeometry(curve, 64, cable.thickness, 7, false)
   }, [cable, to])
 
   const mesh = useRef<THREE.Mesh>(null)
