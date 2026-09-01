@@ -19,8 +19,10 @@ export interface Feedback {
   kind: 'ok' | 'bad' | 'info'
   title: string
   text?: string
-  /** Pièce montrée en 3D dans la fenêtre, si la correction porte sur une pièce */
-  part?: PartId | null
+  /** Remplace le mot d'en-tête par défaut (« Bravo » / « Presque » / « À savoir ») */
+  word?: string
+  /** Pièce montrée en 3D dans la fenêtre, si la correction porte sur une pièce (« case » = le boîtier) */
+  part?: PartId | 'case' | null
   /** Périphérique montré en 3D, pour le chapitre 7 */
   peri?: PeripheralModelId | null
   /**
@@ -35,11 +37,13 @@ export interface Feedback {
 
 /** Options communes à `good`, `bad` et `info`. */
 export interface FeedbackOpts {
-  part?: PartId | null
+  part?: PartId | 'case' | null
   peri?: PeripheralModelId | null
   onDismiss?: () => void
   /** `good` seulement : de combien avance la progression (1 par défaut) */
   step?: number
+  /** Remplace le mot d'en-tête de la fenêtre */
+  word?: string
 }
 
 interface ExerciseState {
@@ -122,6 +126,7 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
         kind: 'ok',
         title,
         text,
+        word: opts.word,
         part: opts.part,
         peri: opts.peri,
         onDismiss: opts.onDismiss,
@@ -139,6 +144,7 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
         kind: 'bad',
         title,
         text,
+        word: opts.word,
         part: opts.part,
         peri: opts.peri,
         onDismiss: opts.onDismiss,
@@ -153,6 +159,7 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
         kind: 'info',
         title,
         text,
+        word: opts.word,
         part: opts.part,
         peri: opts.peri,
         onDismiss: opts.onDismiss,

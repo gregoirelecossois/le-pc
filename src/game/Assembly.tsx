@@ -20,9 +20,10 @@ import {
 import { boundsCenter, BOUNDS, SLOTS } from '@/three/layout'
 import { asPart, PartModel, type PartId } from '@/three/models'
 import { GhostSlot, PcRig } from '@/three/PcRig'
+import { ChallengeFinale } from '@/three/ChallengeFinale'
 import { useBuild } from '@/state/useBuild'
 import { Btn } from '@/ui/bits'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -121,11 +122,18 @@ function DraggedPart({ candidates }: { candidates: PartId[] }) {
 /*  Scène                                                            */
 /* ---------------------------------------------------------------- */
 
-export function AssemblyScene({ showGhosts = true }: { showGhosts?: boolean }) {
+export function AssemblyScene({
+  showGhosts = true,
+  challenge = false,
+}: {
+  showGhosts?: boolean
+  challenge?: boolean
+}) {
   const installed = useBuild((s) => s.installed)
   const dragging = useBuild((s) => s.dragging)
   const candidate = useBuild((s) => s.candidate)
   const phase = useExercise((s) => s.phase)
+  const busy = useExercise((s) => s.busy)
 
   const free = availableNow(installed)
   const ghosts = free.filter((id) => id !== dragging)
@@ -143,6 +151,7 @@ export function AssemblyScene({ showGhosts = true }: { showGhosts?: boolean }) {
           />
         ))}
       {phase === 'play' && dragging && <DraggedPart candidates={free} />}
+      {challenge && busy && <ChallengeFinale />}
     </>
   )
 }
@@ -164,8 +173,10 @@ export function AssemblyUi({
   const [result, setResult] = useState<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
   const ready = useReady()
   const [flash, setFlash] = useState<ComponentId | null>(null)
+  const finaleStarted = useRef(false)
 
   useEffect(() => {
+    finaleStarted.current = false
     useExercise.getState().begin(challenge ? 'defi' : 'montage', INSTALLABLE_IDS.length)
     useBuild.getState().resetBuild(['case'])
     useBuild.getState().set({ explode: 0, labels: false, running: false, powered: false, panelOpen: 1 })
@@ -173,13 +184,37 @@ export function AssemblyUi({
 
   useEffect(() => {
     if (!ready || ex.phase !== 'play' || result) return
-    if (INSTALLABLE_IDS.every((id) => installed.includes(id))) {
-      // La machine est complète : on l'allume pour récompenser
-      useBuild.getState().set({ running: true, powered: true })
+    if (!INSTALLABLE_IDS.every((id) => installed.includes(id))) return
+
+    if (challenge) {
+      // Défi : on lance la séquence de fin spectaculaire (voir ChallengeFinale).
+      if (finaleStarted.current) return
+      finaleStarted.current = true
+      useExercise.getState().setBusy(true)
+      useBuild.getState().set({ running: true, powered: true, camLock: true })
       sfx.boot()
-      setTimeout(() => setResult(useExercise.getState().finish()), 1500)
+      // Garde-fou : on rend la main même si l'animation cale.
+      const guard = setTimeout(() => {
+        if (useExercise.getState().busy) {
+          useExercise.getState().setBusy(false)
+          useBuild.getState().set({ camLock: false })
+        }
+      }, 9000)
+      return () => clearTimeout(guard)
     }
-  }, [ready, installed, ex.phase, result])
+
+    // Montage : on allume la machine puis on affiche le bilan.
+    useBuild.getState().set({ running: true, powered: true })
+    sfx.boot()
+    const t = setTimeout(() => setResult(useExercise.getState().finish()), 1500)
+    return () => clearTimeout(t)
+  }, [ready, installed, ex.phase, result, challenge])
+
+  // Défi : quand la séquence de fin est terminée, on affiche le bilan.
+  useEffect(() => {
+    if (!challenge || !finaleStarted.current || ex.busy || result) return
+    setResult(useExercise.getState().finish())
+  }, [challenge, ex.busy, result])
 
   /* ---- Glisser-déposer ---- */
 
@@ -355,9 +390,7 @@ export function AssemblyUi({
             </div>
           )}
         </>
-      )}
-
-      <Feedback />
+      )}
       <ExerciseEnd result={result} />
     </>
   )

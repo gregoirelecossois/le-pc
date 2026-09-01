@@ -12,6 +12,7 @@ import { Suspense, useEffect, useRef, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { CAMERA_VIEWS, type CameraViewId } from './layout'
 import { useGame } from '@/state/useGame'
+import { useBuild } from '@/state/useBuild'
 import { DevCapture } from './DevCapture'
 
 /* ---------------------------------------------------------------- */
@@ -50,6 +51,8 @@ function CameraRig({
   }, [view, seq])
 
   useFrame((_, dt) => {
+    // Une cinématique pilote la caméra : le recadrage auto se met en retrait.
+    if (useBuild.getState().camLock) return
     if (!goal.current.active || !controls.current) return
     const k = 1 - Math.pow(0.0016, dt)
     tmpPos.copy(camera.position).lerp(goal.current.pos, k)

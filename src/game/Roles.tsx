@@ -11,13 +11,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { create } from 'zustand'
 import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import type * as THREE from 'three'
+import * as THREE from 'three'
 import { COMPONENTS, lowerName, soloShortName, type ComponentId } from '@/data/components'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { Showcase } from '@/three/Showcase'
 import { CAMERA_VIEWS } from '@/three/layout'
 import { asPart } from '@/three/models'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
+import { glowTexture } from '@/three/textures'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -28,7 +29,10 @@ const PAIRS: { id: ComponentId; role: string }[] = [
     id: 'ram1',
     role: "C'est la mémoire qui garde sous la main ce qui sert MAINTENANT, et s'efface à l'extinction du PC.",
   },
-  { id: 'ssd', role: 'Il conserve les fichiers même éteint, et démarre le système très vite.' },
+  {
+    id: 'ssd',
+    role: "Il conserve les fichiers même éteint et démarre le système très vite : c'est le SSD au format M.2 NVMe, le plus récent et le plus rapide.",
+  },
   { id: 'hdd', role: 'Il stocke beaucoup de données pour pas cher, avec des plateaux qui tournent.' },
   {
     id: 'ssd25',
@@ -38,7 +42,10 @@ const PAIRS: { id: ComponentId; role: string }[] = [
   { id: 'motherboard', role: 'Elle relie tous les composants entre eux et leur distribue le courant.' },
   { id: 'psu', role: 'Il transforme le 230 V de la prise murale en courants utilisables.' },
   { id: 'gpu', role: "Elle calcule les images affichées à l'écran." },
-  { id: 'cooler', role: 'Il évacue la chaleur du processeur pour éviter la surchauffe.' },
+  {
+    id: 'cooler',
+    role: "C'est un ventilateur posé sur un dissipateur thermique : il évacue la chaleur du processeur pour éviter la surchauffe.",
+  },
   { id: 'fanFront', role: "Il brasse l'air du boîtier : le frais entre, le chaud ressort." },
   { id: 'cmos', role: "Elle garde l'heure et les réglages quand le PC est débranché." },
 ]
@@ -144,10 +151,40 @@ function useColumns() {
   }, [width, height, fov])
 }
 
+/**
+ * Halo de survol : une lueur bleue DOUCE, placée BIEN DERRIÈRE la pièce.
+ *
+ * Le panneau (face caméra) est reculé d'environ deux fois la taille de la
+ * pièce : le test de profondeur masque alors tout ce qui est caché par la
+ * pièce, et il ne reste que l'auréole autour de sa silhouette — le halo
+ * ne « traverse » plus jamais le composant.
+ */
+function PieceHalo({ size }: { size: number }) {
+  const tex = useMemo(() => glowTexture(), [])
+  return (
+    <sprite
+      position={[0, 0, -size * 2]}
+      scale={[size * 4.2, size * 4.2, 1]}
+      raycast={() => null}
+      renderOrder={-1}
+    >
+      <spriteMaterial
+        map={tex}
+        color="#8fd6ff"
+        transparent
+        opacity={0.95}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </sprite>
+  )
+}
+
 export function RolesScene() {
   const phase = useExercise((s) => s.phase)
   const { choices, answered, order, index } = useRoles()
   const { columns, size } = useColumns()
+  const [hover, setHover] = useState<ComponentId | null>(null)
   if (phase !== 'play' || choices.length < 4) return null
   const good = order[index]
 
@@ -172,7 +209,20 @@ export function RolesScene() {
                 dessus, et une pièce plate ne disparaît plus par la tranche
                 à chaque demi-tour. */}
             <group position={[columns[i], ROW_Y, 0]} rotation={[-0.34, 0, 0]}>
-              <group onClick={() => !answered && answer(id)}>
+              <group
+                onClick={() => !answered && answer(id)}
+                onPointerOver={(e) => {
+                  e.stopPropagation()
+                  if (answered) return
+                  setHover(id)
+                  document.body.style.cursor = 'pointer'
+                }}
+                onPointerOut={() => {
+                  setHover((h) => (h === id ? null : h))
+                  document.body.style.cursor = ''
+                }}
+              >
+                {hover === id && !answered && <PieceHalo size={size} />}
                 <Showcase id={part} y={0} target={size} spin={0.15} lights={false} pedestal={false} />
               </group>
             </group>
@@ -255,8 +305,6 @@ export function RolesUi() {
           <p className="rolequiz-role">{role}</p>
         </div>
       )}
-
-      <Feedback />
       <ExerciseEnd result={result} />
     </>
   )

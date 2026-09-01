@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BADGES } from '@/data/badges'
 import { CHAPTERS } from '@/data/chapters'
 import { COMPONENT_IDS } from '@/data/components'
 import { useGame } from '@/state/useGame'
@@ -54,10 +55,10 @@ export function Home() {
             <b>{COMPONENT_IDS.length}</b> composants en 3D
           </li>
           <li>
-            <b>9</b> exercices progressifs
+            <b>{CHAPTERS.length}</b> exercices progressifs
           </li>
           <li>
-            <b>12</b> badges à décrocher
+            <b>{BADGES.length}</b> badges à décrocher
           </li>
         </ul>
 

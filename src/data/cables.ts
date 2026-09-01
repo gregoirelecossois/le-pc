@@ -9,17 +9,42 @@ import type { CameraViewId, Vec3 } from '@/three/layout'
 const S = MB.surfaceX
 
 /**
- * Point de sortie du faisceau, juste devant le bloc d'alimentation.
+ * Point de sortie du faisceau : posé SUR le passe-fil rond du bloc
+ * d'alimentation, là où les câbles sortent vraiment. Les torons partent
+ * donc du bloc en le touchant, ils ne flottent plus à côté.
  *
- * Il est volontairement DÉGAGÉ du caisson (plus haut et plus en avant) :
- * collé à la tôle, le repère de l'exercice de câblage disparaissait derrière
- * l'angle du bloc dès qu'on regardait la machine de trois quarts.
+ * Le passe-fil est sur la face avant du bloc (local z = -d/2 - 0.4, avec
+ * d = 14 dans le modèle `Psu`) ; en coordonnées monde cela donne :
  */
 export const PSU_OUT: Vec3 = [
-  SLOTS.psu.position[0] + 1.5,
-  SLOTS.psu.position[1] + 3.5,
-  SLOTS.psu.position[2] - 9.5,
+  SLOTS.psu.position[0] + 0.4,
+  SLOTS.psu.position[1] + 0.4,
+  SLOTS.psu.position[2] - 7.9,
 ]
+
+/**
+ * Circuit de cheminement des câbles.
+ *
+ * Le faisceau longe le BORD de la carte mère, jamais sa face : il court
+ * dans l'espace libre situé JUSTE DEVANT le bord avant du PCB
+ * (z ≈ −5.6, au niveau de la tranche de la carte, x ≈ −5.7), là où il ne
+ * touche ni la carte, ni la carte graphique, ni le disque dur, ni le
+ * lecteur. Il ne remonte sur la face que sur les derniers centimètres,
+ * pour rejoindre chaque connecteur.
+ *
+ *   MB.frontZ ≈ −2.4  (bord avant du PCB)
+ *   MB.topY   ≈ 41.5  (bord haut du PCB)
+ *   PCB       : x ≈ −5.9   |  connecteurs : x ≈ S + 1 ≈ −4.8
+ */
+const EDGE_X = -5.7 // x : au niveau de la tranche de la carte
+const FRONT_Z = -5.6 // z : dans le vide devant le bord avant du PCB
+const TOP_Y = 42.6 // y : juste au-dessus du bord haut du PCB
+/** Sortie du bloc : on plonge vers le bas-avant, hors de la carte. */
+const DIVE: Vec3 = [EDGE_X, 2.6, -3]
+/** Le long du bord avant de la carte, du bas vers le haut. */
+const EDGE_LOW: Vec3 = [EDGE_X, 12, FRONT_Z]
+const EDGE_MID: Vec3 = [EDGE_X, 27, FRONT_Z]
+const EDGE_HIGH: Vec3 = [EDGE_X, 40, FRONT_Z]
 
 export type ConnectorId =
   | 'atx24'
@@ -84,6 +109,11 @@ export interface CableDef {
   toHint: string
   /** Cadrage de la caméra pendant cette étape */
   view: CameraViewId
+  /**
+   * Points de passage (coordonnées monde) : le câble suit ce circuit au
+   * lieu d'aller en ligne droite, pour contourner les composants.
+   */
+  waypoints?: Vec3[]
 }
 
 export const CABLES: CableDef[] = [
@@ -103,6 +133,7 @@ export const CABLES: CableDef[] = [
     fromHint: "Clique sur le faisceau qui sort du bloc d'alimentation, en bas de la machine.",
     toHint: "Clique maintenant sur le grand connecteur 24 broches, sur le bord droit de la carte mère.",
     view: 'cablage',
+    waypoints: [DIVE, EDGE_LOW, EDGE_MID, [EDGE_X, 30, FRONT_Z], [-5.2, 30, -3], [-4.4, 30, -1.4]],
   },
   {
     id: 'eps8',
@@ -120,6 +151,16 @@ export const CABLES: CableDef[] = [
     fromHint: "Repars du bloc d'alimentation : clique sur le faisceau.",
     toHint: "Clique sur le connecteur 8 broches, tout en haut de la carte mère, près du ventirad.",
     view: 'cablage',
+    waypoints: [
+      DIVE,
+      EDGE_LOW,
+      EDGE_MID,
+      EDGE_HIGH,
+      [EDGE_X, TOP_Y, FRONT_Z],
+      [EDGE_X, TOP_Y, 9],
+      [-5.0, 41.5, 13],
+      [-4.6, 40.4, 15],
+    ],
   },
   {
     id: 'pcie8',
@@ -137,6 +178,7 @@ export const CABLES: CableDef[] = [
     fromHint: "Clique une nouvelle fois sur le faisceau du bloc d'alimentation.",
     toHint: "Clique sur la prise située SUR LE DESSUS de la carte graphique.",
     view: 'cablage',
+    waypoints: [DIVE, EDGE_LOW, [EDGE_X, 24.5, FRONT_Z], [-3.5, 25.6, -3.5], [1.6, 25, -1.6]],
   },
   {
     id: 'sataPower',
@@ -154,6 +196,7 @@ export const CABLES: CableDef[] = [
     fromHint: "Clique sur le faisceau du bloc d'alimentation.",
     toHint: "Clique sur la plus LARGE des deux prises du disque dur : c'est l'alimentation SATA.",
     view: 'cablage',
+    waypoints: [[EDGE_X, 2.6, -3], [-2.5, 2.1, -4.0]],
   },
   {
     id: 'sataData',
@@ -171,6 +214,7 @@ export const CABLES: CableDef[] = [
     fromHint: "Clique sur la prise étroite du disque dur, à côté de celle qu'on vient de brancher.",
     toHint: "Clique sur les ports SATA de la carte mère, en bas à droite.",
     view: 'cablage',
+    waypoints: [[-4.6, 4, -4.5], [EDGE_X, 11, FRONT_Z], [-5.0, 14.5, -2]],
   },
   {
     id: 'frontPanel',
@@ -188,6 +232,7 @@ export const CABLES: CableDef[] = [
     fromHint: "Clique sur le faisceau qui descend de la façade du boîtier.",
     toHint: "Clique sur le connecteur JFP1, tout en bas de la carte mère.",
     view: 'cablage',
+    waypoints: [[-4.6, 10.5, -14], [EDGE_X, 10.5, FRONT_Z], [-5.0, 12, -1]],
   },
   {
     id: 'cpuFan',
@@ -205,6 +250,7 @@ export const CABLES: CableDef[] = [
     fromHint: "Clique sur le fil qui sort du ventirad.",
     toHint: "Clique sur le connecteur CPU_FAN, juste à côté, sur la carte mère.",
     view: 'cablage',
+    waypoints: [[-4.6, 33, 11], [EDGE_X, TOP_Y, 11], [-4.8, 41, 10.3]],
   },
 ]
 

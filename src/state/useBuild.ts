@@ -34,6 +34,16 @@ export interface BuildState {
   running: boolean
   /** LED allumées */
   powered: boolean
+  /**
+   * Fin d'atelier : on laisse la machine tourner et la vue pivoter en
+   * douceur quelques secondes avant l'écran de réussite.
+   */
+  celebrate: boolean
+  /**
+   * Une animation pilote la caméra (cinématique d'intro, finale du défi) :
+   * le recadrage automatique se met en retrait le temps qu'elle joue.
+   */
+  camLock: boolean
   /** Panneau latéral : 0 fermé, 1 retiré */
   panelOpen: number
   hideFront: boolean
@@ -70,6 +80,8 @@ const BASE = {
   flash: null,
   running: false,
   powered: false,
+  celebrate: false,
+  camLock: false,
   panelOpen: 1,
   hideFront: false,
   cables: [] as string[],

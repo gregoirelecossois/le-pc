@@ -1,5 +1,5 @@
 /**
- * Parcours en 9 chapitres. Chaque chapitre = un exercice.
+ * Parcours en 10 chapitres. Chaque chapitre = un exercice.
  * L'ordre est pensé pour aller du plus simple (regarder, nommer)
  * au plus exigeant (monter, câbler, démonter, refaire en temps limité).
  */
@@ -12,6 +12,7 @@ export type ChapterId =
   | 'montage'
   | 'cablage'
   | 'peripheriques'
+  | 'branchement'
   | 'demontage'
   | 'defi'
 
@@ -67,7 +68,7 @@ export const CHAPTERS: Chapter[] = [
     icon: '🎯',
     title: 'Trouve-le dans la tour',
     subtitle: 'On te donne le nom, tu cliques dessus',
-    goal: "Clique sur le composant demandé directement dans la machine. Si une pièce est cachée, écarte-les avec le curseur « Vue éclatée », en haut de l'écran.",
+    goal: "Clique sur le composant demandé directement dans la machine. Si une pièce est cachée, écarte les composants avec le curseur « Vue éclatée », en haut de l'écran.",
     objective: 'Situer chaque composant dans le boîtier.',
     requires: 'nommer',
     xp: 120,
@@ -119,33 +120,48 @@ export const CHAPTERS: Chapter[] = [
     id: 'peripheriques',
     n: 7,
     icon: '🖥️',
-    title: 'Les périphériques',
-    subtitle: 'Reconnais-les, puis branche-les',
+    title: 'Nomme les périphériques',
+    subtitle: 'Reconnais-les et classe-les',
     goal:
-      "D’abord tu reconnais chaque périphérique et tu dis s’il est en entrée ou en sortie. Ensuite tu attrapes la fiche au bout de son câble et tu la déposes sur la bonne prise, à l’arrière de la machine.",
+      "Chaque périphérique tourne sur son présentoir. Donne son nom, puis dis s’il est en entrée (il envoie de l’information à l’ordinateur), en sortie (il en reçoit), ou les deux.",
     objective:
-      "Nommer les périphériques courants, distinguer entrée et sortie, et reconnaître chaque fiche (USB, HDMI, RJ45, jack, secteur) avec sa prise.",
+      "Nommer les périphériques courants et distinguer entrée et sortie.",
     requires: 'montage',
-    xp: 170,
-    minutes: 12,
+    xp: 110,
+    minutes: 7,
     color: '#38bdf8',
   },
   {
-    id: 'demontage',
+    id: 'branchement',
     n: 8,
+    icon: '🔌',
+    title: 'Branche les périphériques',
+    subtitle: 'La bonne fiche sur la bonne prise',
+    goal:
+      "Chaque périphérique arrive avec son câble. Attrape la fiche au bout du câble et dépose-la sur la bonne prise, à l’arrière de l’unité centrale. Tant que le câble secteur n’est pas branché, rien ne s’allume.",
+    objective:
+      "Reconnaître chaque fiche (USB, HDMI, RJ45, jack, secteur) et la prise qui lui correspond.",
+    requires: 'peripheriques',
+    xp: 130,
+    minutes: 8,
+    color: '#0ea5e9',
+  },
+  {
+    id: 'demontage',
+    n: 9,
     icon: '🧰',
     title: 'Le démontage',
     subtitle: "L'ordre inverse, sans rien casser",
-    goal: 'Retire les composants dans le bon ordre. Attention : on ne retire pas un composant qui en supporte un autre.',
+    goal: "On éteint, on débranche les périphériques, puis on retire les composants dans le bon ordre. On ne retire jamais un composant qui en supporte un autre.",
     objective: 'Démonter une machine en sécurité, dans le bon ordre.',
-    requires: 'cablage',
+    requires: 'branchement',
     xp: 190,
     minutes: 10,
     color: '#94a3b8',
   },
   {
     id: 'defi',
-    n: 9,
+    n: 10,
     icon: '🏆',
     title: 'Le défi du technicien',
     subtitle: 'Montage complet contre la montre',

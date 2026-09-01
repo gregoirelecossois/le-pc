@@ -7,7 +7,10 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type * as THREE from 'three'
 import { BOUNDS, type Vec3 } from './layout'
-import { PartModel, type PartId } from './models'
+import { CaseShell, PartModel, type PartId } from './models'
+
+/** Le boîtier n'est pas dans BOUNDS (il n'est jamais une « pièce ») : cote à part. */
+const CASE_BOUNDS: { size: Vec3; offset: Vec3 } = { size: [22, 47.4, 46], offset: [0, 23.5, 0] }
 import {
   PeripheralModel,
   PERIPHERAL_MODELS,
@@ -46,7 +49,7 @@ export function Showcase({
   pedestal = true,
   lights = true,
 }: {
-  id: PartId
+  id: PartId | 'case'
   /** tours par seconde */
   spin?: number
   /** taille visée de la plus grande dimension, en unités monde */
@@ -62,11 +65,11 @@ export function Showcase({
   lights?: boolean
 }) {
   const g = useRef<THREE.Group>(null)
-  const b = BOUNDS[id]
+  const b = id === 'case' ? CASE_BOUNDS : BOUNDS[id]
   // Les petites pièces ne sont pas agrandies à l'infini : une pile bouton
   // gonflée à la taille d'une carte mère ne serait plus reconnaissable.
   const scale = Math.min(target / Math.max(b.size[0], b.size[1], b.size[2]), 4)
-  const rot = DISPLAY_ROTATION[id] ?? [0, 0, 0]
+  const rot = id === 'case' ? ([0, -0.5, 0] as Vec3) : DISPLAY_ROTATION[id] ?? [0, 0, 0]
 
   useFrame((_, dt) => {
     if (g.current) g.current.rotation.y += dt * spin * Math.PI * 2
@@ -77,7 +80,11 @@ export function Showcase({
       <group ref={g} scale={scale}>
         <group rotation={rot}>
           <group position={[-b.offset[0], -b.offset[1], -b.offset[2]]}>
-            <PartModel id={id} running powered showcase />
+            {id === 'case' ? (
+              <CaseShell panelOpen={0} hideFront={false} powered={false} />
+            ) : (
+              <PartModel id={id} running powered showcase />
+            )}
           </group>
         </group>
       </group>

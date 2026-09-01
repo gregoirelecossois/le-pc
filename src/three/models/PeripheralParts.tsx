@@ -33,7 +33,7 @@ export type PeripheralModelId =
 /*  L'écran                                                          */
 /* ================================================================ */
 
-function Monitor({ on = true }: { on?: boolean }) {
+export function Monitor({ on = true }: { on?: boolean }) {
   const tex = useMemo(() => screenTexture(), [])
   const w = 52
   const h = 30
@@ -93,7 +93,7 @@ function Monitor({ on = true }: { on?: boolean }) {
 /*  Le clavier                                                       */
 /* ================================================================ */
 
-function Keyboard() {
+export function Keyboard() {
   const keys = useMemo(() => {
     const arr: { p: Vec3; s: number }[] = []
     const rows = [
@@ -199,7 +199,7 @@ function shellTop(z: number) {
   return 0.75 + 3.25 * 0.76 * Math.sqrt(k)
 }
 
-function Mouse({ showcase = false }: { showcase?: boolean }) {
+export function Mouse({ showcase = false }: { showcase?: boolean }) {
   // La ligne de séparation des deux boutons épouse le dos de la souris :
   // un trait droit passerait sous la surface au milieu et ressortirait
   // aux extrémités.
@@ -243,7 +243,7 @@ function Mouse({ showcase = false }: { showcase?: boolean }) {
 }
 
 /** Amorce de câble à l'avant de la souris (présentoir seulement). */
-function MouseTail() {
+export function MouseTail() {
   const geo = useMemo(() => {
     const curve = new THREE.CatmullRomCurve3(
       [
@@ -278,7 +278,7 @@ function MouseTail() {
  * (vert en bas, rouge à droite, bleu à gauche, jaune en haut) : c'est ce
  * qui fait reconnaître une manette d'un seul coup d'œil.
  */
-function Gamepad() {
+export function Gamepad() {
   const SHELL = '#4c5468'
   const GRIP = '#15171c'
   const face: { p: Vec3; c: string }[] = [
@@ -384,7 +384,7 @@ function Gamepad() {
 /*  L'enceinte                                                       */
 /* ================================================================ */
 
-function Speaker() {
+export function Speaker() {
   return (
     <group name="speaker">
       {/* Caisson */}
@@ -440,7 +440,7 @@ function Speaker() {
 /*  Le microphone                                                    */
 /* ================================================================ */
 
-function Microphone() {
+export function Microphone() {
   return (
     <group name="micro">
       {/* Socle lesté */}
@@ -489,7 +489,7 @@ function Microphone() {
 /*  La box internet                                                  */
 /* ================================================================ */
 
-function InternetBox() {
+export function InternetBox() {
   return (
     <group name="box">
       {/* Corps debout, aux arêtes très arrondies */}
@@ -546,7 +546,7 @@ function InternetBox() {
  * noir laqué marqué d'une nervure dans la longueur, un curseur strié
  * qu'on pousse au pouce, et le connecteur USB-A sorti à l'avant.
  */
-function UsbKey() {
+export function UsbKey() {
   const BODY = '#111318'
 
   return (
@@ -606,7 +606,7 @@ function UsbKey() {
 /*  Le câble d'alimentation (prise murale)                           */
 /* ================================================================ */
 
-function WallOutlet({ showcase = false }: { showcase?: boolean }) {
+export function WallOutlet({ showcase = false }: { showcase?: boolean }) {
   // Présenté seul, l'objet à reconnaître est le CÂBLE, pas le mur : on
   // montre alors le cordon complet, fiche secteur d'un côté, fiche C13 de
   // l'autre. Dans l'atelier de branchement, au contraire, la prise murale
@@ -655,7 +655,7 @@ function WallOutlet({ showcase = false }: { showcase?: boolean }) {
  * fiche C13 en bas à droite. Il tient dans la même boîte englobante que la
  * prise murale, pour que le présentoir le cadre sans réglage particulier.
  */
-function PowerCord() {
+export function PowerCord() {
   const geo = useMemo(() => {
     // Une boucle lâche, comme un câble vendu enroulé.
     const curve = new THREE.CatmullRomCurve3(

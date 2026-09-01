@@ -8,8 +8,9 @@ import { create } from 'zustand'
 import { COMPONENTS, lowerName, sameComponent, soloName, type ComponentId } from '@/data/components'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
+import { IntroCinematic, INTRO_TOTAL_MS } from '@/three/IntroCinematic'
 import { asPart } from '@/three/models'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, Feedback, useReady } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, useReady } from './Frame'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
@@ -56,6 +57,7 @@ function shuffle<T>(a: T[]): T[] {
 
 export function LocateScene() {
   const phase = useExercise((s) => s.phase)
+  const busy = useExercise((s) => s.busy)
   const { order, index, flash, locked } = useLocate()
   const target = order[index]
 
@@ -82,7 +84,16 @@ export function LocateScene() {
     }
   }
 
-  return <PcRig interactive={phase === 'play' && !locked} highlights={flash} onPartClick={onPartClick} />
+  return (
+    <>
+      <PcRig
+        interactive={phase === 'play' && !locked && !busy}
+        highlights={flash}
+        onPartClick={onPartClick}
+      />
+      {phase === 'play' && <IntroCinematic />}
+    </>
+  )
 }
 
 function next() {
@@ -113,6 +124,18 @@ export function LocateUi() {
     if (ready && finished && !result) setResult(useExercise.getState().finish())
   }, [ready, finished, result])
 
+  // Garde-fou : la cinématique d'intro rend la main même si l'animation cale.
+  useEffect(() => {
+    if (!ex.busy) return
+    const t = setTimeout(() => {
+      if (useExercise.getState().busy) {
+        useExercise.getState().setBusy(false)
+        useBuild.getState().set({ camLock: false, explode: 0 })
+      }
+    }, INTRO_TOTAL_MS + 900)
+    return () => clearTimeout(t)
+  }, [ex.busy])
+
   const target = order[index]
 
   const hint = () => {
@@ -125,7 +148,7 @@ export function LocateUi() {
   return (
     <>
       <ExerciseBar onHint={hint} />
-      <ExerciseIntro>
+      <ExerciseIntro onStart={() => useExercise.getState().setBusy(true)}>
         <div className="intro-tips">
           <div>
             <b>🎚️ Le curseur du haut</b> écarte les pièces si tu n'arrives pas à cliquer
@@ -136,7 +159,13 @@ export function LocateUi() {
         </div>
       </ExerciseIntro>
 
-      {ex.phase === 'play' && target && (
+      {ex.phase === 'play' && ex.busy && (
+        <div className="hintbar">
+          <span>🎬</span> Petit tour d'horizon de la machine…
+        </div>
+      )}
+
+      {ex.phase === 'play' && !ex.busy && target && (
         <>
           <ExplodeSlider />
 
@@ -150,9 +179,7 @@ export function LocateUi() {
             </div>
           </div>
         </>
-      )}
-
-      <Feedback />
+      )}
       <ExerciseEnd result={result} />
     </>
   )

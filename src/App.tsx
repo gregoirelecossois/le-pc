@@ -13,6 +13,8 @@ import { SettingsButton } from './ui/Settings'
 import { DevPanel } from './ui/DevKit'
 import { CHAPTER_OFFSET, CHAPTER_VIEW, GameScene, GameUi, LOCKED_VIEW } from './game'
 import { useExercise } from './game/useExercise'
+import { Feedback } from './game/Frame'
+import { Boot } from './ui/Boot'
 
 // Accès aux stores depuis la console, en développement seulement.
 // Exposé ici (et pas dans chaque store) pour être certain de viser
@@ -33,6 +35,7 @@ export default function App() {
   const sound = useGame((s) => s.sound)
   const dragging = useBuild((s) => s.dragging)
   const handDrag = useBuild((s) => s.handDrag)
+  const celebrate = useBuild((s) => s.celebrate)
   const [view, setViewId] = useState<CameraViewId>('overview')
   // Compteur de demandes : recadrer sur la vue déjà active doit fonctionner.
   const [viewSeq, setViewSeq] = useState(0)
@@ -60,6 +63,7 @@ export default function App() {
   const inGame = screen === 'jeu' && chapter
 
   return (
+    <Boot>
     <div className="app">
       <div className="canvas-layer">
         <Stage
@@ -68,7 +72,7 @@ export default function App() {
           controlsEnabled={
             !dragging && !handDrag && !(inGame && chapter && LOCKED_VIEW.includes(chapter))
           }
-          autoRotate={screen === 'accueil'}
+          autoRotate={screen === 'accueil' || (!!inGame && celebrate)}
           frameOffset={
             screen === 'accueil' ? 0.2 : inGame && chapter ? (CHAPTER_OFFSET[chapter] ?? 0) : 0
           }
@@ -88,9 +92,14 @@ export default function App() {
         {inGame && <GameUi chapter={chapter} onView={setView} />}
       </div>
 
+      {/* Fenêtre de correction : montée une fois pour toute la session, son
+          rendu 3D reste chaud (préchargé au lancement). */}
+      <Feedback />
+
       <SettingsButton />
       <DevPanel />
       <Toasts />
     </div>
+    </Boot>
   )
 }

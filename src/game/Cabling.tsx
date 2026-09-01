@@ -19,8 +19,9 @@ import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { Cable3D, ConnectorMarker, PortMarker } from '@/three/Cables'
 import { PcRig } from '@/three/PcRig'
 import type { CameraViewId } from '@/three/layout'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, Feedback, useReady } from './Frame'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, useReady } from './Frame'
 import { useExercise } from './useExercise'
+import { SpeakButton } from '@/ui/speak'
 import { sfx } from '@/audio/sfx'
 
 /** Où en est-on dans le branchement du câble courant ? */
@@ -40,6 +41,10 @@ const useCabling = create<CablingState>()(() => ({
   just: null,
   finished: false,
 }))
+
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__cabling = useCabling
+}
 
 const ORDER = [...CABLES].sort((a, b) => a.order - b.order)
 
@@ -154,9 +159,14 @@ export function CablingUi({ onView }: { onView?: (v: CameraViewId) => void }) {
 
   useEffect(() => {
     if (!ready || !finished || result) return
-    useBuild.getState().set({ running: true, powered: true })
+    // On laisse le PC allumé (ventilateurs qui tournent) et la vue pivoter
+    // doucement quelques secondes avant l'écran de réussite.
+    useBuild.getState().set({ running: true, powered: true, celebrate: true })
     sfx.boot()
-    const t = setTimeout(() => setResult(useExercise.getState().finish()), 1400)
+    const t = setTimeout(() => {
+      useBuild.getState().set({ celebrate: false })
+      setResult(useExercise.getState().finish())
+    }, 4200)
     return () => clearTimeout(t)
   }, [ready, finished, result])
 
@@ -194,6 +204,16 @@ export function CablingUi({ onView }: { onView?: (v: CameraViewId) => void }) {
             <span className="pill" style={{ borderColor: 'var(--warn)', color: 'var(--warn)' }}>
               Câble {index + 1} / {ORDER.length}
             </span>
+            <SpeakButton
+              className="speakbtn-head"
+              text={[
+                current.name,
+                current.what,
+                `Ce qu'il transporte : ${current.carries}`,
+                `1. ${current.fromLabel}. ${current.fromHint}`,
+                `2. ${CONNECTORS[current.to].label}. ${current.toHint}`,
+              ]}
+            />
           </div>
           <h3 className="cablepanel-name">{current.name}</h3>
           <p className="cablepanel-role">{current.what}</p>
@@ -236,8 +256,6 @@ export function CablingUi({ onView }: { onView?: (v: CameraViewId) => void }) {
           </div>
         </div>
       )}
-
-      <Feedback />
       <ExerciseEnd result={result} />
     </>
   )

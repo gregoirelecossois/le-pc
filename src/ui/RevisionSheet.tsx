@@ -1,7 +1,7 @@
 /**
  * La leçon à emporter.
  *
- * Elle ne s'ouvre qu'une fois les neuf ateliers terminés : c'est la
+ * Elle ne s'ouvre qu'une fois tous les ateliers terminés : c'est la
  * récompense du parcours, et son contenu n'a de sens qu'après l'avoir
  * vécu. À l'écran, l'élève la relit ; le bouton en haut lui fabrique le
  * PDF à conserver (les postes de la salle n'ont pas d'imprimante).

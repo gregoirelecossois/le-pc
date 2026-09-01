@@ -15,11 +15,20 @@ import { PeriShowcase, Showcase } from './Showcase'
 import type { PartId } from './models'
 import type { PeripheralModelId } from './models/PeripheralParts'
 
-/** Montre soit une pièce interne (`id`), soit un périphérique (`peri`). */
-export function PartSpinner({ id, peri }: { id?: PartId | null; peri?: PeripheralModelId | null }) {
+/** Montre soit une pièce interne (`id`, boîtier compris), soit un périphérique (`peri`). */
+export function PartSpinner({
+  id,
+  peri,
+  spin = 0.2,
+}: {
+  id?: PartId | 'case' | null
+  peri?: PeripheralModelId | null
+  /** Vitesse de rotation (0 = figé, pour économiser quand la fenêtre est fermée) */
+  spin?: number
+}) {
   return (
     <Canvas
-      dpr={[1, 1.75]}
+      dpr={[1, 1.5]}
       gl={{
         antialias: true,
         // en développement : permet la capture pour vérifier le rendu
@@ -58,9 +67,9 @@ export function PartSpinner({ id, peri }: { id?: PartId | null; peri?: Periphera
           />
         </Environment>
         {peri ? (
-          <PeriShowcase id={peri} spin={0.2} target={19} y={0} pedestal={false} />
+          <PeriShowcase id={peri} spin={spin} target={19} y={0} pedestal={false} />
         ) : id ? (
-          <Showcase id={id} spin={0.2} target={17} y={0} pedestal={false} />
+          <Showcase id={id} spin={spin} target={17} y={0} pedestal={false} />
         ) : null}
         {import.meta.env.DEV && <DevCapture secondary />}
       </Suspense>

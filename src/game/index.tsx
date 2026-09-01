@@ -20,6 +20,7 @@ export const CHAPTER_VIEW: Record<ChapterId, CameraViewId> = {
   montage: 'inside',
   cablage: 'cablage',
   peripheriques: 'showcase',
+  branchement: 'branchement',
   demontage: 'inside',
   defi: 'inside',
 }
@@ -59,11 +60,13 @@ export function GameScene({ chapter }: { chapter: ChapterId }) {
     case 'cablage':
       return <CablingScene />
     case 'peripheriques':
-      return <PeripheralsScene />
+      return <PeripheralsScene part={1} />
+    case 'branchement':
+      return <PeripheralsScene part={2} />
     case 'demontage':
       return <DisassemblyScene />
     case 'defi':
-      return <AssemblyScene showGhosts={false} />
+      return <AssemblyScene showGhosts={false} challenge />
   }
 }
 
@@ -88,7 +91,9 @@ export function GameUi({
     case 'cablage':
       return <CablingUi onView={onView} />
     case 'peripheriques':
-      return <PeripheralsUi onView={onView} />
+      return <PeripheralsUi part={1} onView={onView} />
+    case 'branchement':
+      return <PeripheralsUi part={2} onView={onView} />
     case 'demontage':
       return <DisassemblyUi onView={onView} />
     case 'defi':
