@@ -42,6 +42,28 @@ function screenshotBridge(outDir: string): Plugin {
   }
 }
 
+/**
+ * Retire les scripts de comptes du build hors-ligne.
+ *
+ * En `file://`, le Store de l'Atelier bascule de lui-même en mode local et la pastille
+ * de connexion ne s'affiche pas : les trois fichiers ne feraient donc STRICTEMENT rien.
+ * Mais `public/` est recopié tel quel, et un `dist-offline/` à plusieurs fichiers n'est
+ * plus la clé USB à double-cliquer qu'on promet. On les enlève des deux côtés.
+ *
+ * La progression reste sauvegardée : `safeStorage` (src/state/useGame.ts) retombe sur
+ * localStorage dès que `window.Store` est absent.
+ */
+function sansComptesHorsLigne(): Plugin {
+  return {
+    name: 'sans-comptes-hors-ligne',
+    apply: 'build',
+    enforce: 'post',
+    config: () => ({ publicDir: false as const }),
+    transformIndexHtml: (html) =>
+      html.replace(/[ \t]*<script src="\.\/atelier\/[^"]+"><\/script>\r?\n/g, ''),
+  }
+}
+
 // Dossier de sortie des captures de mise au point (voir screenshotBridge).
 const SHOT_DIR = process.env.LEPC_SHOT_DIR ?? path.resolve(import.meta.dirname, '.dev-shots')
 
@@ -52,7 +74,11 @@ export default defineConfig(({ mode }) => {
   const offline = mode === 'offline'
   return {
     base: './',
-    plugins: [react(), screenshotBridge(SHOT_DIR), ...(offline ? [viteSingleFile()] : [])],
+    plugins: [
+      react(),
+      screenshotBridge(SHOT_DIR),
+      ...(offline ? [sansComptesHorsLigne(), viteSingleFile()] : []),
+    ],
     resolve: {
       alias: { '@': path.resolve(import.meta.dirname, 'src') },
       // une seule copie de three.js dans tout le bundle

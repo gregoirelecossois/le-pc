@@ -5,9 +5,14 @@ composants d'une unité centrale. Conçu pour des élèves de collège
 (technologie, cycle 4), en préparation d'une séance de montage / démontage
 sur une **vraie machine**.
 
-Tout fonctionne dans le navigateur, sans installation côté élève, et **sans
-aucune donnée envoyée sur Internet** : la progression reste dans le
-navigateur du poste.
+Tout fonctionne dans le navigateur, sans installation côté élève.
+
+**Par défaut, aucune donnée n'est envoyée sur Internet** : la progression reste dans le
+navigateur du poste. C'est vrai de la version hors-ligne (un fichier, une clé USB) et de
+tout élève non connecté.
+
+**Si l'élève se connecte**, sa progression suit son compte de poste en poste, comme celle
+des six ateliers — voir « Comptes élèves » plus bas.
 
 ---
 
@@ -116,6 +121,47 @@ Le bouton ⚙️ en bas à droite permet de :
 
 Le jeu est prévu pour une utilisation **souris + clavier** :
 clic gauche pour pivoter, clic droit pour déplacer, molette pour zoomer.
+
+---
+
+## Comptes élèves
+
+Le jeu partage les comptes de l'**[Atelier
+informatique](https://github.com/gregoirelecossois/atelier-informatique)**. Les deux
+applications étant publiées sur le même domaine, elles partagent la même origine au sens
+du navigateur : **un élève connecté d'un côté l'est de l'autre**, sans second écran de
+connexion. Sa progression le suit alors de poste en poste.
+
+Concrètement :
+
+| situation | ce qui se passe |
+|---|---|
+| version hors-ligne, clé USB, `file://` | rien ne sort du poste, comportement historique |
+| en ligne, élève **non** connecté | rien ne sort du poste ; une pastille propose de se connecter |
+| en ligne, élève **connecté** | progression enregistrée sur le serveur, retrouvée partout |
+
+Quand un compte est actif, il **remplace le pseudo** : le jeu n'en demande plus, et
+« Changer d'utilisateur » disparaît (il effacerait une progression enregistrée). On
+change d'élève par « Se déconnecter » dans la pastille, qui sauvegarde d'abord.
+
+### Ce qu'il faut savoir pour maintenir
+
+Le dossier `public/atelier/` contient des **copies** de trois fichiers de l'atelier
+(`store.js`, `compte.js`, `config.js`) — voir `public/atelier/PROVENANCE.txt`. Ne les
+corrige pas ici : corrige dans l'atelier, puis reprends-les.
+
+```bash
+npm run sync:atelier
+```
+
+La progression est écrite sous la clé **`pc_progression`**. Le préfixe `pc_` n'est pas
+décoratif : c'est lui qui autorise le serveur de l'atelier à la stocker (liste
+`PREFIXES`, jumelée entre `api/server.js` et `scripts/store.js` là-bas). Une valeur ne
+doit pas dépasser **4096 octets** — un parcours entièrement terminé en pèse ~1050, la
+marge est confortable mais elle se réduit à chaque chapitre ajouté.
+
+Le build hors-ligne (`npm run build:offline`) **retire** ces scripts : en `file://` ils
+ne feraient rien, et ils casseraient la promesse du fichier unique à double-cliquer.
 
 ---
 
