@@ -26,7 +26,7 @@ import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PortMarker } from '@/three/Cables'
 import { PcRig } from '@/three/PcRig'
 import { PeriShowcase } from '@/three/Showcase'
-import type { Vec3 } from '@/three/layout'
+import type { CameraViewId, Vec3 } from '@/three/layout'
 import {
   FlexCable,
   PeripheralModel,
@@ -487,7 +487,7 @@ export function PeripheralsUi({
   onView,
 }: {
   part?: 1 | 2
-  onView?: (v: 'showcase' | 'branchement' | 'rear') => void
+  onView?: (v: CameraViewId) => void
 }) {
   const ex = useExercise()
   const { order, index, step, revealed, wrongName, finished, done } = usePeri()
@@ -547,14 +547,19 @@ export function PeripheralsUi({
       setResult(useExercise.getState().finish())
       return
     }
+    /* On recule et on plonge AVANT de faire tourner la machine : le cadrage de
+       travail colle à la connectique arrière, on n'y aurait vu qu'un bout de tôle
+       défiler. Le déplacement prend moins d'une seconde, il reste largement de quoi
+       profiter de l'animation. */
+    onView?.('celebration')
     useBuild.getState().set({ running: true, powered: true, celebrate: true })
     sfx.boot()
     const t = setTimeout(() => {
       useBuild.getState().set({ celebrate: false })
       setResult(useExercise.getState().finish())
-    }, 4200)
+    }, 4600)
     return () => clearTimeout(t)
-  }, [ready, finished, result, part])
+  }, [ready, finished, result, part, onView])
 
   /* ---------------- Manche 1 : identifier ---------------- */
 

@@ -161,14 +161,17 @@ export function CablingUi({ onView }: { onView?: (v: CameraViewId) => void }) {
     if (!ready || !finished || result) return
     // On laisse le PC allumé (ventilateurs qui tournent) et la vue pivoter
     // doucement quelques secondes avant l'écran de réussite.
+    // On recule et on plonge d'abord : le cadrage du câblage colle au flanc ouvert,
+    // la machine s'y serait mise à tourner à moitié hors du cadre.
+    onView?.('celebration')
     useBuild.getState().set({ running: true, powered: true, celebrate: true })
     sfx.boot()
     const t = setTimeout(() => {
       useBuild.getState().set({ celebrate: false })
       setResult(useExercise.getState().finish())
-    }, 4200)
+    }, 4600)
     return () => clearTimeout(t)
-  }, [ready, finished, result])
+  }, [ready, finished, result, onView])
 
   const hint = () => {
     if (!current) return
