@@ -9,7 +9,8 @@
     "build": "node ./node_modules/vite/bin/vite.js build",
     "build:offline": "node ./node_modules/vite/bin/vite.js build --mode offline",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
-    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit"
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
+    "sync:atelier": "node -e \"const f=['store.js','compte.js','config.js'],s=process.env.ATELIER||'../Atelier-informatique/scripts';for(const n of f){require('fs').copyFileSync(s+'/'+n,'public/atelier/'+n);console.log('repris : '+n)}\""
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

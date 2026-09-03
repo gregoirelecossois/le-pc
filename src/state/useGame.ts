@@ -1,7 +1,18 @@
 /**
  * Progression de l'élève.
- * Tout est stocké dans le navigateur (localStorage) : aucune donnée
- * ne quitte le poste, rien n'est envoyé sur Internet.
+ *
+ * Deux modes, et c'est le `Store` de l'Atelier informatique (public/atelier/) qui
+ * tranche tout seul :
+ *
+ * - **Sans compte** — clé USB, double-clic, `file://`, build hors-ligne, ou simplement
+ *   élève non connecté : tout reste dans le navigateur du poste, rien ne part sur
+ *   Internet. C'est le comportement historique, inchangé.
+ * - **Avec compte** — l'élève connecté retrouve sa progression de poste en poste,
+ *   exactement comme celle des six ateliers. Pas de second écran de connexion : les
+ *   deux applications sont publiées sur la même origine, la session est déjà là.
+ *
+ * Le basculement est entièrement porté par `safeStorage` ci-dessous ; le reste du
+ * fichier ignore lequel des deux modes est actif.
  */
 
 import { create } from 'zustand'
@@ -9,6 +20,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { BADGE_BY_ID, type BadgeId } from '@/data/badges'
 import { CHAPTERS, type ChapterId, levelFor } from '@/data/chapters'
 import { COMPONENT_IDS, type ComponentId } from '@/data/components'
+import { declarerPresence, lireDeblocage, oublierDeblocage } from '@/state/useCompte'
 import { sfx } from '@/audio/sfx'
 
 export type Screen = 'accueil' | 'carte' | 'jeu' | 'fiche' | 'badges'
@@ -60,15 +72,59 @@ interface GameState {
 }
 
 /**
+ * Clé de la progression.
+ *
+ * Le préfixe `pc_` n'est pas décoratif : c'est LUI qui autorise le serveur de l'Atelier
+ * à stocker la clé (liste `PREFIXES`, jumelée entre `api/server.js` et
+ * `scripts/store.js` là-bas). Une clé sans préfixe connu est refusée, pas ignorée.
+ */
+const CLE = 'pc_progression'
+
+/** Nom d'avant le partage de comptes. Repris une fois, pour ne perdre aucune partie. */
+const CLE_HERITEE = 'le-pc-progression'
+
+/** Le Store de l'Atelier s'il a été chargé (public/atelier/store.js), sinon null. */
+function atelier(): {
+  get(k: string): string | null
+  set(k: string, v: string): void
+  del(k: string): void
+} | null {
+  if (typeof window === 'undefined') return null
+  return (window as unknown as Record<string, unknown>).Store as never
+}
+
+/**
  * Stockage tolérant aux pannes.
  *
- * Ouvert par double-clic (protocole file://) ou en navigation privée,
- * localStorage peut être indisponible : dans ce cas la partie fonctionne
- * quand même, seule la sauvegarde est perdue.
+ * Trois niveaux de repli, du plus capable au plus dégradé :
+ *   1. le `Store` de l'Atelier — qui gère lui-même le mode compte ET le mode local ;
+ *   2. `localStorage` en direct, si le script de l'Atelier n'a pas été chargé ;
+ *   3. une Map en mémoire — ouvert par double-clic (`file://`) ou en navigation privée,
+ *      `localStorage` peut lever : la partie tourne, seule la sauvegarde est perdue.
  */
 const memory = new Map<string, string>()
 const safeStorage = {
   getItem: (k: string) => {
+    const S = atelier()
+    if (S) {
+      const v = S.get(k)
+      if (v != null) return v
+      /* Reprise de l'ancienne clé : un élève qui avait déjà joué sur ce poste avant le
+         partage de comptes ne repart pas de zéro. On efface la vieille clé aussitôt
+         recopiée — sinon elle ressusciterait le jour où la nouvelle est légitimement
+         vide (compte réinitialisé par le professeur, par exemple). */
+      try {
+        const vieux = window.localStorage.getItem(CLE_HERITEE)
+        if (vieux) {
+          S.set(k, vieux)
+          window.localStorage.removeItem(CLE_HERITEE)
+          return vieux
+        }
+      } catch {
+        /* localStorage indisponible : rien à reprendre, ce n'est pas une erreur. */
+      }
+      return null
+    }
     try {
       return window.localStorage.getItem(k)
     } catch {
@@ -76,6 +132,20 @@ const safeStorage = {
     }
   },
   setItem: (k: string, v: string) => {
+    /* Le serveur refuse toute valeur de plus de 4096 octets (VALEUR_MAX). On est très
+       en dessous, mais la progression grossit à chaque chapitre ajouté : mieux vaut le
+       voir en console au moment où ça se joue que par une sauvegarde qui disparaît. */
+    if (import.meta.env.DEV && v.length > 3500) {
+      console.warn(
+        `[progression] ${v.length} octets : la limite serveur est 4096. ` +
+          `Découper la clé « ${CLE} » avant d'ajouter d'autres chapitres.`,
+      )
+    }
+    const S = atelier()
+    if (S) {
+      S.set(k, v)
+      return
+    }
     try {
       window.localStorage.setItem(k, v)
     } catch {
@@ -83,6 +153,11 @@ const safeStorage = {
     }
   },
   removeItem: (k: string) => {
+    const S = atelier()
+    if (S) {
+      S.del(k)
+      return
+    }
     try {
       window.localStorage.removeItem(k)
     } catch {
@@ -204,7 +279,7 @@ export const useGame = create<GameState>()(
       reset: () => set({ ...EMPTY, screen: 'accueil', chapter: null, toasts: [] }),
     }),
     {
-      name: 'le-pc-progression',
+      name: CLE,
       version: 2,
       /**
        * v1 -> v2 : le chapitre 7 « Les périphériques » a été scindé en deux
@@ -260,6 +335,68 @@ export function starsFor(mistakes: number, hintsUsed: number): 0 | 1 | 2 | 3 {
   if (penalty <= 5) return 1
   return 1
 }
+
+/**
+ * Le Store de l'Atelier démarre sur son cache local, puis interroge le serveur. Quand la
+ * réponse arrive et qu'elle change quelque chose, il émet `store:maj` — une seule fois,
+ * à l'amorçage. Sans cette relecture, un élève qui a joué sur un autre poste verrait ici
+ * son ancienne progression, et l'écraserait au premier chapitre terminé.
+ */
+if (typeof document !== 'undefined') {
+  document.addEventListener('store:maj', () => {
+    void useGame.persist.rehydrate()
+  })
+}
+
+/**
+ * Applique l'instruction d'ouverture posée par le professeur.
+ *
+ * « Ouvrir jusqu'au chapitre N » se traduit ici, et nulle part ailleurs : un chapitre est
+ * jouable si le précédent est `done` (cf. isUnlocked), il faut donc marquer terminés les
+ * N-1 premiers. Deux règles pour que ce soit sans danger :
+ *
+ *  - on n'écrase JAMAIS un résultat existant. Un élève qui avait trois étoiles les garde ;
+ *    l'ouverture ne peut qu'ajouter, jamais retirer ni dégrader.
+ *  - les résultats fabriqués valent zéro étoile et portent `bestScore: 0`. Ils disent
+ *    « ce chapitre est ouvert », pas « il l'a réussi » : ni le professeur ni l'élève ne
+ *    doit lire une réussite là où il n'y en a pas eu.
+ *
+ * L'instruction est effacée dès qu'elle est honorée, sinon elle se rejouerait à chaque
+ * visite et re-débloquerait indéfiniment ce que l'élève aurait pu vouloir refaire.
+ */
+function appliquerDeblocage() {
+  const n = lireDeblocage()
+  if (!n) return
+  const s = useGame.getState()
+  const res = { ...s.results }
+  let change = false
+  for (const ch of CHAPTERS.slice(0, Math.min(n, CHAPTERS.length) - 1)) {
+    if (res[ch.id]?.done) continue
+    res[ch.id] = { stars: 0, bestScore: 0, mistakes: 0, seconds: 0, hintsUsed: 0, done: true }
+    change = true
+  }
+  if (change) useGame.setState({ results: res })
+  oublierDeblocage()
+}
+
+/* À l'amorçage, puis quand la réponse du serveur arrive : le professeur peut avoir
+   cliqué pendant que l'élève avait l'application ouverte ailleurs. */
+appliquerDeblocage()
+if (typeof document !== 'undefined') {
+  document.addEventListener('store:maj', appliquerDeblocage)
+}
+
+/**
+ * Position déclarée au tableau de bord enseignant : le chapitre en cours s'il en joue un,
+ * sinon le premier non terminé — c'est là qu'il en est, même s'il regarde la carte.
+ */
+declarerPresence(() => {
+  const s = useGame.getState()
+  const i = s.chapter
+    ? CHAPTERS.findIndex((c) => c.id === s.chapter)
+    : CHAPTERS.findIndex((c) => !s.results[c.id]?.done)
+  return (i < 0 ? CHAPTERS.length : i + 1)
+})
 
 /* Accès depuis la console en développement. */
 if (import.meta.env.DEV) {

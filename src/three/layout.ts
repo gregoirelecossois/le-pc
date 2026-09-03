@@ -320,6 +320,18 @@ export const CAMERA_VIEWS = {
   lineup: { position: [0, 32, 96] as Vec3, target: [0, 30, 0] as Vec3 },
   /** Établi : le boîtier à gauche, les pièces en attente à droite */
   bench: { position: [72, 44, -78] as Vec3, target: [4, 20, -6] as Vec3 },
+  /**
+   * Fin de chapitre : on prend du recul et on plonge sur la machine.
+   *
+   * Les cadrages de travail sont serrés — « branchement » colle à la connectique
+   * arrière, « cablage » au flanc ouvert. Or la machine se met à tourner sur elle-même
+   * pour fêter la réussite : depuis ces vues-là, on n'en voyait qu'un morceau défiler.
+   * Il faut donc reculer AVANT de lancer l'animation.
+   *
+   * Plongée à ~45° et distance ~160 : au-delà la machine devient un jouet, et le
+   * maxDistance des contrôles (230) ramènerait de toute façon la caméra de force.
+   */
+  celebration: { position: [70, 130, 90] as Vec3, target: [0, 20, 0] as Vec3 },
 } as const
 
 export type CameraViewId = keyof typeof CAMERA_VIEWS

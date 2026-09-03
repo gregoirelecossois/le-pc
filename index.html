@@ -8,6 +8,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Comptes élèves, partagés avec l'Atelier informatique (voir public/atelier/).
+      Scripts classiques et non modules : ils s'exécutent AVANT le module ci-dessous,
+      qui est différé par nature. window.Store existe donc quand useGame s'initialise.
+      Ordre imposé : config (adresse du serveur) → store (données) → compte (pastille).
+      Chemins relatifs : la base Vite est './', et l'application tourne aussi en file://.
+    -->
+    <script src="./atelier/config.js"></script>
+    <script src="./atelier/store.js"></script>
+    <script src="./atelier/compte.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -26,7 +26,7 @@ import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PortMarker } from '@/three/Cables'
 import { PcRig } from '@/three/PcRig'
 import { PeriShowcase } from '@/three/Showcase'
-import type { Vec3 } from '@/three/layout'
+import type { CameraViewId, Vec3 } from '@/three/layout'
 import {
   FlexCable,
   PeripheralModel,
@@ -487,7 +487,7 @@ export function PeripheralsUi({
   onView,
 }: {
   part?: 1 | 2
-  onView?: (v: 'showcase' | 'branchement' | 'rear') => void
+  onView?: (v: CameraViewId) => void
 }) {
   const ex = useExercise()
   const { order, index, step, revealed, wrongName, finished, done } = usePeri()
@@ -547,14 +547,19 @@ export function PeripheralsUi({
       setResult(useExercise.getState().finish())
       return
     }
+    /* On recule et on plonge AVANT de faire tourner la machine : le cadrage de
+       travail colle à la connectique arrière, on n'y aurait vu qu'un bout de tôle
+       défiler. Le déplacement prend moins d'une seconde, il reste largement de quoi
+       profiter de l'animation. */
+    onView?.('celebration')
     useBuild.getState().set({ running: true, powered: true, celebrate: true })
     sfx.boot()
     const t = setTimeout(() => {
       useBuild.getState().set({ celebrate: false })
       setResult(useExercise.getState().finish())
-    }, 4200)
+    }, 4600)
     return () => clearTimeout(t)
-  }, [ready, finished, result, part])
+  }, [ready, finished, result, part, onView])
 
   /* ---------------- Manche 1 : identifier ---------------- */
 
@@ -627,6 +632,12 @@ export function PeripheralsUi({
     useBuild.getState().set({ handDrag: false })
     usePeri.setState({ snap: null })
     if (!peri) return
+    /* Une correction est ouverte : le geste n'a pas eu lieu. Le moteur ignore déjà
+       tout ce qui arrive derrière une fenêtre (cf. useExercise), on sort aussi ici
+       pour que la fiche reparte simplement dans le bac, sans message inutile. */
+    if (ex.feedback) return
+    /* Tout est branché et la machine fête ça : il n'y a plus rien à brancher. */
+    if (s.finished) return
 
     if (!port) {
       ex.info(
@@ -707,7 +718,12 @@ export function PeripheralsUi({
       )
       return
     }
-    const target = current.accepts[0]
+    /* La première prise acceptée QUI SOIT ENCORE LIBRE : une prise occupée n'est plus
+       aimantée, la montrer enverrait l'élève sur une cible qu'il ne peut pas viser.
+       Le cas est devenu courant depuis que clavier et souris se partagent les deux
+       seules prises noires. */
+    const pris = new Set(Object.values(usePeri.getState().done))
+    const target = current.accepts.find((p) => !pris.has(p)) ?? current.accepts[0]
     usePeri.setState({ flashPort: target })
     setTimeout(() => usePeri.setState({ flashPort: null }), 2600)
     exs.info(`Où brancher ${current.name} ?`, `${current.hint} (${PORT_BY_ID[target]?.label ?? ''})`, {

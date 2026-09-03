@@ -1,0 +1,17 @@
+Ces trois fichiers sont des COPIES, prises telles quelles dans le dépôt
+
+    gregoirelecossois/atelier-informatique  ->  scripts/
+
+    config.js   adresse du serveur de comptes (le seul à personnaliser)
+    store.js    progression : compte en ligne, ou navigateur du poste
+    compte.js   pastille d'état et fenêtre de connexion
+
+Ne les modifie PAS ici : la correction serait perdue à la prochaine reprise, et
+les deux applications divergeraient en silence. Corrige dans l'atelier, puis :
+
+    npm run sync:atelier
+
+⚠ store.js porte la liste PREFIXES, jumelle de celle de api/server.js côté
+atelier. « Le PC » écrit sous le préfixe pc_ : retirer ce préfixe d'un côté fait
+rejeter la progression par le serveur. Les deux listes bougent ensemble, et
+l'API doit être redéployée (voir api/README.md § 2.4 là-bas).

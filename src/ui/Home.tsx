@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BADGES } from '@/data/badges'
 import { CHAPTERS } from '@/data/chapters'
 import { COMPONENT_IDS } from '@/data/components'
 import { useGame } from '@/state/useGame'
+import { comptesDisponibles, useCompte } from '@/state/useCompte'
 import { Btn, XpBar } from './bits'
 import { sheetUnlocked } from './RevisionSheet'
 import { DevUnlock } from './DevKit'
@@ -18,11 +19,28 @@ export function Home() {
   const [name, setName] = useState(pseudo)
   const [newName, setNewName] = useState('')
 
+  /**
+   * Compte élève de l'Atelier informatique, s'il y en a un.
+   *
+   * Quand il existe, il remplace entièrement le pseudo : demander son prénom à quelqu'un
+   * qui vient de se connecter n'a pas de sens, et deux identités concurrentes sur le même
+   * écran, c'est l'élève qui joue sous un nom et le professeur qui en voit un autre.
+   * Le changement d'utilisateur passe alors par la pastille de connexion (« Se
+   * déconnecter »), qui elle sauvegarde avant de rendre la main.
+   */
+  const compte = useCompte()
+
+  useEffect(() => {
+    if (compte && pseudo !== compte.prenom) setPseudo(compte.prenom)
+  }, [compte, pseudo, setPseudo])
+
   const done = CHAPTERS.filter((c) => results[c.id]?.done).length
   const ficheOk = sheetUnlocked(results)
   /** Vrai quand on repart de zéro pour un autre élève sur le même poste. */
   const [asking, setAsking] = useState(false)
-  const started = (xp > 0 || done > 0) && !asking
+  /* Connecté, on entre directement : le compte dit déjà qui joue, même à sa
+     toute première partie (xp et chapitres encore à zéro). */
+  const started = (!!compte || xp > 0 || done > 0) && !asking
 
   const start = () => {
     setPseudo(name.trim() || 'Élève')
@@ -94,16 +112,22 @@ export function Home() {
                   {ficheOk ? '📄' : '🔒'} Fiche de révision
                 </Btn>
               </div>
-              {/* Poste partagé : un autre élève doit pouvoir repartir de zéro
-                  sans que la progression du précédent se mélange à la sienne. */}
-              <button className="home-switch" onClick={() => setAsking(true)}>
-                👤 Ce n'est pas toi ? Changer d'utilisateur
-              </button>
+              {/* Poste partagé SANS compte : un autre élève doit pouvoir repartir de
+                  zéro sans que la progression du précédent se mélange à la sienne.
+                  Avec un compte, ce bouton effacerait une progression enregistrée sur
+                  le serveur — on passe par « Se déconnecter » dans la pastille. */}
+              {!compte && (
+                <button className="home-switch" onClick={() => setAsking(true)}>
+                  👤 Ce n'est pas toi ? Changer d'utilisateur
+                </button>
+              )}
             </>
           ) : (
             <>
               <label className="home-label" htmlFor="pseudo">
-                {asking ? 'Le prénom du nouvel élève' : 'Ton prénom (il reste sur cet ordinateur)'}
+                {asking
+                  ? 'Le prénom du nouvel élève'
+                  : 'Lancer une session hors ligne (les données restent sur l’ordinateur)'}
               </label>
               <div className="row">
                 <input
@@ -111,7 +135,7 @@ export function Home() {
                   className="input"
                   value={asking ? newName : name}
                   maxLength={24}
-                  placeholder="Ex. Camille"
+                  placeholder="Ton prénom"
                   onChange={(e) => (asking ? setNewName : setName)(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (asking ? switchUser() : start())}
                 />
@@ -137,9 +161,24 @@ export function Home() {
                   </button>
                 </>
               )}
+              {/* Information à l'élève sur ses données : elle doit rester VRAIE dans les
+                  deux cas. Sur clé USB ou hors-ligne, rien ne peut sortir du poste, et on
+                  le dit. Ailleurs, c'est le libellé au-dessus qui porte la promesse (« les
+                  données restent sur l'ordinateur ») : on ne la répète pas ici, on montre
+                  l'autre possibilité — lui promettre que rien ne sortira jamais serait
+                  faux dès qu'il se connecte. */}
               <p className="home-privacy">
-                Aucune donnée n'est envoyée sur Internet : ta progression est
-                enregistrée uniquement dans ce navigateur.
+                {comptesDisponibles() ? (
+                  <>
+                    Ou connecte-toi (en haut à gauche) pour retrouver ta progression sur
+                    n'importe quel poste.
+                  </>
+                ) : (
+                  <>
+                    Aucune donnée n'est envoyée sur Internet : ta progression est
+                    enregistrée uniquement dans ce navigateur.
+                  </>
+                )}
               </p>
             </>
           )}

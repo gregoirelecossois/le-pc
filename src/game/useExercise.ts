@@ -118,7 +118,23 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
   setTotal: (total) => set({ total }),
   setBusy: (busy) => set({ busy }),
 
+  /* ----------------------------------------------------------------
+     Une correction à la fois, et elle n'est JAMAIS remplacée.
+
+     `feedback` n'a qu'une seule place. Tant qu'une correction est ouverte,
+     une seconde l'écrasait — et avec elle son `onDismiss`, qui est
+     précisément ce qui fait avancer l'exercice. Un élève qui redéposait une
+     pièce sans avoir fermé la fenêtre de réussite perdait donc son
+     avancement : la même question lui était reposée, et sur le DERNIER item
+     l'atelier ne se validait plus jamais. Signalé sur le chapitre 8, avec le
+     câble d'alimentation, mais les dix chapitres partagent ce moteur.
+
+     La fenêtre est modale : on ignore donc ce qui arrive derrière elle. C'est
+     aussi ce que l'élève voit — il ne devrait pas pouvoir agir sur une scène
+     qu'une fenêtre recouvre.
+     ---------------------------------------------------------------- */
   good: (title, text, opts = {}) => {
+    if (get().feedback) return
     sfx.good()
     set((s) => ({
       done: s.done + (opts.step ?? 1),
@@ -136,6 +152,7 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
   },
 
   bad: (title, text, opts = {}) => {
+    if (get().feedback) return
     sfx.error()
     set((s) => ({
       mistakes: s.mistakes + 1,
@@ -153,7 +170,8 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
     }))
   },
 
-  info: (title, text, opts = {}) =>
+  info: (title, text, opts = {}) => {
+    if (get().feedback) return
     set({
       feedback: {
         kind: 'info',
@@ -165,7 +183,8 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
         onDismiss: opts.onDismiss,
         seq: seq++,
       },
-    }),
+    })
+  },
 
   // La suite de l'exercice est déclenchée par la fermeture de la fenêtre,
   // pas par une minuterie : l'élève avance quand il a lu.
@@ -208,4 +227,10 @@ export const useExercise = create<ExerciseState>()((set, get) => ({
 
   quit: () => set({ phase: 'intro', chapter: null, feedback: null }),
 }))
+
+/* Mise au point depuis la console, en développement — comme __peri et __build.
+   Sert notamment à rejouer un enchaînement d'exercice sans le refaire à la main. */
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__ex = useExercise
+}
 
