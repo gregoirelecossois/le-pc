@@ -50,6 +50,26 @@ export function eleveConnecte(): Eleve | null {
 }
 
 /**
+ * Déclare au tableau de bord enseignant où en est l'élève EN CE MOMENT.
+ *
+ * Les six ateliers sont reconnus par leur nom de fichier ; « Le PC » vit ailleurs, il
+ * doit donc se présenter. `store.js` appelle cette fonction à chaque battement (45 s) et
+ * n'en retient que `atelier`, `niveau` et `mission` — le reste serait ignoré.
+ *
+ * `atelier: 'pc'` doit correspondre à une entrée de `window.APPS_LIEES` côté atelier,
+ * sinon le tableau de bord ignore la présence. `niveau` porte le numéro de chapitre :
+ * c'est ce que le professeur lit, « chapitre 4/10 ».
+ */
+export function declarerPresence(chapitreCourant: () => number): void {
+  if (typeof window === 'undefined') return
+  ;(window as unknown as Record<string, unknown>).ATELIER_POSITION = () => ({
+    atelier: 'pc',
+    niveau: chapitreCourant(),
+    mission: 0,
+  })
+}
+
+/**
  * Version réactive. Le Store démarre sur son cache puis interroge le serveur : le profil
  * peut donc arriver APRÈS le premier rendu, et il repart à null si la session expire en
  * pleine séance. On s'abonne plutôt que de lire une fois.

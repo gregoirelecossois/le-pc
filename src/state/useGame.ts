@@ -20,6 +20,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { BADGE_BY_ID, type BadgeId } from '@/data/badges'
 import { CHAPTERS, type ChapterId, levelFor } from '@/data/chapters'
 import { COMPONENT_IDS, type ComponentId } from '@/data/components'
+import { declarerPresence } from '@/state/useCompte'
 import { sfx } from '@/audio/sfx'
 
 export type Screen = 'accueil' | 'carte' | 'jeu' | 'fiche' | 'badges'
@@ -346,6 +347,18 @@ if (typeof document !== 'undefined') {
     void useGame.persist.rehydrate()
   })
 }
+
+/**
+ * Position déclarée au tableau de bord enseignant : le chapitre en cours s'il en joue un,
+ * sinon le premier non terminé — c'est là qu'il en est, même s'il regarde la carte.
+ */
+declarerPresence(() => {
+  const s = useGame.getState()
+  const i = s.chapter
+    ? CHAPTERS.findIndex((c) => c.id === s.chapter)
+    : CHAPTERS.findIndex((c) => !s.results[c.id]?.done)
+  return (i < 0 ? CHAPTERS.length : i + 1)
+})
 
 /* Accès depuis la console en développement. */
 if (import.meta.env.DEV) {
