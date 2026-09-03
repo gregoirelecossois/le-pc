@@ -125,7 +125,9 @@ export function Home() {
           ) : (
             <>
               <label className="home-label" htmlFor="pseudo">
-                {asking ? 'Le prénom du nouvel élève' : 'Ton prénom (il reste sur cet ordinateur)'}
+                {asking
+                  ? 'Le prénom du nouvel élève'
+                  : 'Lancer une session hors ligne (les données restent sur l’ordinateur)'}
               </label>
               <div className="row">
                 <input
@@ -133,7 +135,7 @@ export function Home() {
                   className="input"
                   value={asking ? newName : name}
                   maxLength={24}
-                  placeholder="Ex. Camille"
+                  placeholder="Ton prénom"
                   onChange={(e) => (asking ? setNewName : setName)(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (asking ? switchUser() : start())}
                 />
@@ -159,15 +161,16 @@ export function Home() {
                   </button>
                 </>
               )}
-              {/* Cette phrase est une information à l'élève sur ses données : elle doit
-                  rester VRAIE dans les deux cas. Sur clé USB ou hors-ligne, rien ne peut
-                  sortir du poste. Ailleurs, rien ne sort tant qu'il ne s'est pas
-                  connecté — mais lui promettre que rien ne sortira jamais serait faux. */}
+              {/* Information à l'élève sur ses données : elle doit rester VRAIE dans les
+                  deux cas. Sur clé USB ou hors-ligne, rien ne peut sortir du poste, et on
+                  le dit. Ailleurs, c'est le libellé au-dessus qui porte la promesse (« les
+                  données restent sur l'ordinateur ») : on ne la répète pas ici, on montre
+                  l'autre possibilité — lui promettre que rien ne sortira jamais serait
+                  faux dès qu'il se connecte. */}
               <p className="home-privacy">
                 {comptesDisponibles() ? (
                   <>
-                    Sans connexion, ta progression reste dans ce navigateur et rien n'est
-                    envoyé. Connecte-toi (en haut à gauche) pour la retrouver sur
+                    Ou connecte-toi (en haut à gauche) pour retrouver ta progression sur
                     n'importe quel poste.
                   </>
                 ) : (
