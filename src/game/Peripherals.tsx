@@ -713,7 +713,12 @@ export function PeripheralsUi({
       )
       return
     }
-    const target = current.accepts[0]
+    /* La première prise acceptée QUI SOIT ENCORE LIBRE : une prise occupée n'est plus
+       aimantée, la montrer enverrait l'élève sur une cible qu'il ne peut pas viser.
+       Le cas est devenu courant depuis que clavier et souris se partagent les deux
+       seules prises noires. */
+    const pris = new Set(Object.values(usePeri.getState().done))
+    const target = current.accepts.find((p) => !pris.has(p)) ?? current.accepts[0]
     usePeri.setState({ flashPort: target })
     setTimeout(() => usePeri.setState({ flashPort: null }), 2600)
     exs.info(`Où brancher ${current.name} ?`, `${current.hint} (${PORT_BY_ID[target]?.label ?? ''})`, {

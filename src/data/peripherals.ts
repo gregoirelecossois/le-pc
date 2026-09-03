@@ -63,9 +63,36 @@ export const KIND_HELP: Record<PeripheralKind, string> = {
 
 const USB_A = ['usb2-a', 'usb2-b', 'usb3-a', 'usb3-b', 'usb3-c']
 
+/** Les deux prises noires, USB 2.0. */
+const USB2 = ['usb2-a', 'usb2-b']
+
+/** Les trois prises bleues, USB 3.0. */
+const USB3 = ['usb3-a', 'usb3-b', 'usb3-c']
+
 /** Piège commun à toutes les fiches USB rectangulaires. */
 const USBC_TRAP = {
   usbc: "Cette prise-là est l'USB-C : elle est petite et ovale. Ta fiche est rectangulaire, elle n'y entrera jamais.",
+}
+
+/**
+ * Clavier et souris : les prises bleues sont refusées, en expliquant pourquoi.
+ *
+ * Ça marcherait, et on le dit — un clavier fonctionne parfaitement sur de l'USB 3. Les
+ * refuser sert deux fois :
+ *
+ *  - **pédagogiquement**, c'est la bonne habitude : un clavier envoie quelques octets par
+ *    frappe, la vitesse ne lui sert à rien. On réserve les prises rapides à ce qui
+ *    transfère vraiment. C'est un réflexe de technicien, pas une règle arbitraire ;
+ *  - **très concrètement**, il n'y a que TROIS prises bleues et la clé USB en exige une.
+ *    Un élève qui branchait clavier, souris et manette dessus se retrouvait dans une
+ *    impasse : arrivé à la clé, plus une seule prise bleue libre — une prise occupée
+ *    n'est plus aimantée — et l'atelier devenait impossible à terminer.
+ *
+ * `tolerated` et non `traps` : ce n'est pas une faute, aucune erreur n'est comptée. On
+ * explique, et on laisse recommencer.
+ */
+function reserverLesBleues(texte: string): Record<string, string> {
+  return Object.fromEntries(USB3.map((p) => [p, texte]))
 }
 
 export const PERIPHERALS: Peripheral[] = [
@@ -105,10 +132,16 @@ export const PERIPHERALS: Peripheral[] = [
     plug: 'usb-a',
     plugName: 'une fiche USB-A',
     plugHint: "Le rectangle métallique classique. Il ne se branche que dans un sens : la languette vers le bas.",
-    accepts: USB_A,
-    ok: "Parfait. Le clavier n'a pas besoin de vitesse : n'importe quelle prise USB fait l'affaire.",
+    accepts: USB2,
+    ok: "Parfait. Le clavier n'a aucun besoin de vitesse : une prise noire lui suffit, et les bleues restent libres.",
     traps: USBC_TRAP,
-    hint: "N'importe laquelle des prises USB rectangulaires convient.",
+    tolerated: reserverLesBleues(
+      "Ça fonctionnerait, un clavier marche très bien sur une prise bleue. Mais il envoie " +
+        'quelques octets à chaque frappe : la vitesse ne lui sert à rien. Et il n\'y a que ' +
+        'trois prises bleues — garde-les pour ce qui transfère vraiment, une clé USB ou un ' +
+        'disque externe. Prends une prise noire.',
+    ),
+    hint: "Une prise USB noire (USB 2.0) : le clavier n'a pas besoin des bleues, plus rapides.",
   },
   {
     id: 'mouse',
@@ -120,10 +153,15 @@ export const PERIPHERALS: Peripheral[] = [
     plug: 'usb-a',
     plugName: 'une fiche USB-A',
     plugHint: 'La même fiche rectangulaire que le clavier.',
-    accepts: USB_A,
-    ok: 'Exact. Souris et clavier sont les deux périphériques d’entrée de base de tout ordinateur.',
+    accepts: USB2,
+    ok: 'Exact. Souris et clavier sont les deux périphériques d’entrée de base de tout ordinateur — et tous deux se contentent d’une prise noire.',
     traps: USBC_TRAP,
-    hint: 'Une prise USB, exactement comme le clavier.',
+    tolerated: reserverLesBleues(
+      'Ça fonctionnerait, mais une souris envoie encore moins de données qu’un clavier : ' +
+        'la vitesse ne lui sert à rien non plus. Les trois prises bleues sont précieuses, ' +
+        'réserve-les à ce qui transfère beaucoup. Prends une prise noire, comme pour le clavier.',
+    ),
+    hint: 'Une prise USB noire, exactement comme le clavier.',
   },
   {
     id: 'gamepad',
