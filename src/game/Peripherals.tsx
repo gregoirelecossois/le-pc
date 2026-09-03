@@ -627,6 +627,12 @@ export function PeripheralsUi({
     useBuild.getState().set({ handDrag: false })
     usePeri.setState({ snap: null })
     if (!peri) return
+    /* Une correction est ouverte : le geste n'a pas eu lieu. Le moteur ignore déjà
+       tout ce qui arrive derrière une fenêtre (cf. useExercise), on sort aussi ici
+       pour que la fiche reparte simplement dans le bac, sans message inutile. */
+    if (ex.feedback) return
+    /* Tout est branché et la machine fête ça : il n'y a plus rien à brancher. */
+    if (s.finished) return
 
     if (!port) {
       ex.info(
