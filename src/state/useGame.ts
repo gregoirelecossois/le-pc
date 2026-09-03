@@ -20,7 +20,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { BADGE_BY_ID, type BadgeId } from '@/data/badges'
 import { CHAPTERS, type ChapterId, levelFor } from '@/data/chapters'
 import { COMPONENT_IDS, type ComponentId } from '@/data/components'
-import { declarerPresence } from '@/state/useCompte'
+import { declarerPresence, lireDeblocage, oublierDeblocage } from '@/state/useCompte'
 import { sfx } from '@/audio/sfx'
 
 export type Screen = 'accueil' | 'carte' | 'jeu' | 'fiche' | 'badges'
@@ -346,6 +346,44 @@ if (typeof document !== 'undefined') {
   document.addEventListener('store:maj', () => {
     void useGame.persist.rehydrate()
   })
+}
+
+/**
+ * Applique l'instruction d'ouverture posée par le professeur.
+ *
+ * « Ouvrir jusqu'au chapitre N » se traduit ici, et nulle part ailleurs : un chapitre est
+ * jouable si le précédent est `done` (cf. isUnlocked), il faut donc marquer terminés les
+ * N-1 premiers. Deux règles pour que ce soit sans danger :
+ *
+ *  - on n'écrase JAMAIS un résultat existant. Un élève qui avait trois étoiles les garde ;
+ *    l'ouverture ne peut qu'ajouter, jamais retirer ni dégrader.
+ *  - les résultats fabriqués valent zéro étoile et portent `bestScore: 0`. Ils disent
+ *    « ce chapitre est ouvert », pas « il l'a réussi » : ni le professeur ni l'élève ne
+ *    doit lire une réussite là où il n'y en a pas eu.
+ *
+ * L'instruction est effacée dès qu'elle est honorée, sinon elle se rejouerait à chaque
+ * visite et re-débloquerait indéfiniment ce que l'élève aurait pu vouloir refaire.
+ */
+function appliquerDeblocage() {
+  const n = lireDeblocage()
+  if (!n) return
+  const s = useGame.getState()
+  const res = { ...s.results }
+  let change = false
+  for (const ch of CHAPTERS.slice(0, Math.min(n, CHAPTERS.length) - 1)) {
+    if (res[ch.id]?.done) continue
+    res[ch.id] = { stars: 0, bestScore: 0, mistakes: 0, seconds: 0, hintsUsed: 0, done: true }
+    change = true
+  }
+  if (change) useGame.setState({ results: res })
+  oublierDeblocage()
+}
+
+/* À l'amorçage, puis quand la réponse du serveur arrive : le professeur peut avoir
+   cliqué pendant que l'élève avait l'application ouverte ailleurs. */
+appliquerDeblocage()
+if (typeof document !== 'undefined') {
+  document.addEventListener('store:maj', appliquerDeblocage)
 }
 
 /**

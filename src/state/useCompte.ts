@@ -22,7 +22,12 @@ interface StoreAtelier {
   eleve(): (Eleve & Record<string, unknown>) | null
   surEtat(cb: (etat: string) => void): void
   enLigne(): boolean
+  get(k: string): string | null
+  del(k: string): void
 }
+
+/** Clé d'instruction posée par le tableau de bord enseignant. Cf. lireDeblocage(). */
+const CLE_DEBLOCAGE = 'pc_debloquer'
 
 function store(): StoreAtelier | null {
   if (typeof window === 'undefined') return null
@@ -67,6 +72,30 @@ export function declarerPresence(chapitreCourant: () => number): void {
     niveau: chapitreCourant(),
     mission: 0,
   })
+}
+
+/**
+ * Le professeur a-t-il demandé d'ouvrir des chapitres à cet élève ?
+ *
+ * Le tableau de bord n'écrit JAMAIS dans la progression du jeu : il y déposerait des
+ * `results` inventés, avec des étoiles et des scores qu'il faudrait fabriquer, et il
+ * devrait pour cela connaître le modèle de données d'ici — qui a déjà changé une fois
+ * (le chapitre 7 scindé en deux, migration v1 → v2). Il dépose donc un simple nombre,
+ * et c'est CE fichier qui décide de ce que « débloquer jusqu'au chapitre N » veut dire.
+ *
+ * Renvoie le numéro demandé, ou 0. L'instruction est effacée par appliquerDeblocage()
+ * une fois honorée : la suppression remonte au serveur comme n'importe quelle clé.
+ */
+export function lireDeblocage(): number {
+  const S = store()
+  if (!S) return 0
+  const n = parseInt(S.get(CLE_DEBLOCAGE) || '', 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+/** Efface l'instruction : elle a été honorée, elle ne doit pas se rejouer à chaque visite. */
+export function oublierDeblocage(): void {
+  store()?.del(CLE_DEBLOCAGE)
 }
 
 /**
