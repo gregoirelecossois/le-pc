@@ -217,9 +217,10 @@ export const SLOTS: Record<Exclude<ComponentId, 'case'>, SlotDef> = {
   },
 
   ssd25: {
-    // Posé à plat sur le dessus de la cage à disques, comme dans un vrai
-    // boîtier moderne qui garde un berceau 2,5" au-dessus de la baie 3,5".
-    position: [-1.0, 5.6, -12.0],
+    // Posé à plat dans son berceau, un peu au-dessus du disque dur (voir
+    // le support du SSD dans `CaseShell`) : dessus du berceau à 6,6, le
+    // SSD fait 0,7 cm d'épaisseur.
+    position: [-1.0, 6.95, -13.4],
     approach: [0, 1, 0],
     approachDist: 9,
     explode: [24, 4, -6],
@@ -314,6 +315,12 @@ export const CAMERA_VIEWS = {
   branchement: { position: [6, 34, 142] as Vec3, target: [12, 25, 14] as Vec3 },
   /** Vue basse : alimentation et disque dur */
   bottom: { position: [74, 17, 50] as Vec3, target: [0, 6, 2] as Vec3 },
+  /**
+   * Sous la machine : à travers la tôle perforée du plancher, on voit
+   * tourner le ventilateur de l'alimentation. C'est la seule vue qui passe
+   * sous l'horizon (voir `UNDER_VIEWS` dans Stage).
+   */
+  dessous: { position: [16, -26, 30] as Vec3, target: [1, 2, 15] as Vec3 },
   /** Présentoir : une seule pièce isolée, pour les quiz */
   showcase: { position: [8, 30, 60] as Vec3, target: [0, 24, 0] as Vec3 },
   /** Quatre pièces alignées, pour le QCM « à quoi ça sert ? » */
@@ -358,7 +365,8 @@ export const BOUNDS: Record<Exclude<ComponentId, 'case'>, Bounds> = {
   ssd25: { size: [7.2, 1.4, 10.2], offset: [0, 0, 0] },
   // façade comprise : le bloc dépasse un peu vers l'avant
   odd: { size: [15.2, 4.6, 18.2], offset: [0, 0, -0.4] },
-  gpu: { size: [11.8, 4.2, 26.2], offset: [-0.2, -0.3, -0.15] },
+  // carte, équerre et sorties vidéo comprises (voir three/gpu.ts)
+  gpu: { size: [13.4, 4.7, 27.7], offset: [0.31, -0.52, 0.64] },
   psu: { size: [15.2, 8.8, 14.2], offset: [0, 0, 0] },
   fanFront: { size: [12.2, 12.2, 2.8], offset: [0, 0, 0] },
   fanRear: { size: [12.2, 12.2, 2.8], offset: [0, 0, 0] },

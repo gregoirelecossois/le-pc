@@ -13,6 +13,8 @@ import { M } from './materials'
 import { CaseShell, PartModel, type PartId } from './models'
 import { COMPONENTS, type ComponentId } from '@/data/components'
 import { useBuild } from '@/state/useBuild'
+import { isLite, useGame } from '@/state/useGame'
+import { StaticBatch } from './staticBatch'
 
 /* ---------------------------------------------------------------- */
 /*  Surbrillance : boîte translucide + arêtes                        */
@@ -102,6 +104,8 @@ interface PartSlotProps {
   interactive: boolean
   /** Animation d'insertion en cours : 0 -> arrive de loin, 1 -> en place */
   entering?: boolean
+  /** Fusionne les objets immobiles de la pièce (rendu allégé) */
+  batched: boolean
   onOver?: (id: ComponentId) => void
   onOut?: (id: ComponentId) => void
   onClick?: (id: ComponentId) => void
@@ -117,6 +121,7 @@ const PartSlot = memo(function PartSlot({
   showLabel,
   interactive,
   entering,
+  batched,
   onOver,
   onOut,
   onClick,
@@ -188,7 +193,9 @@ const PartSlot = memo(function PartSlot({
           : undefined
       }
     >
-      <PartModel id={id} running={running} powered={powered} installed={installed} />
+      <StaticBatch enabled={batched} deps={[running, powered, installed]}>
+        <PartModel id={id} running={running} powered={powered} installed={installed} />
+      </StaticBatch>
       {highlight && <BoxHighlight size={b.size} offset={b.offset} kind={highlight} />}
       {showLabel && <PartLabel id={id} position={labelPos} />}
     </group>
@@ -293,6 +300,7 @@ export function PcRig({
   const hideFront = useBuild((s) => s.hideFront)
   const labels = useBuild((s) => s.labels)
   const setBuild = useBuild((s) => s.set)
+  const batched = useGame((s) => isLite(s.quality))
 
   // Surveille le pointeur pour distinguer un clic d'une rotation de vue.
   useEffect(watchDrag, [])
@@ -324,16 +332,20 @@ export function PcRig({
             : undefined
         }
       >
-        <CaseShell
-          panelOpen={Math.max(panelOpen, explode)}
-          hideFront={hideFront}
-          powered={powered}
-          slotCovers={
-            installedSet.has('gpu')
-              ? [true, false, false, true, true, true, true]
-              : [true, true, true, true, true, true, true]
-          }
-        />
+        {/* Le panneau vitré, qui s'écarte avec la vue éclatée, reste à part :
+            seuls la façade, les cache-slots et le voyant changent le contenu. */}
+        <StaticBatch enabled={batched} deps={[hideFront, powered, installedSet.has('gpu')]}>
+          <CaseShell
+            panelOpen={Math.max(panelOpen, explode)}
+            hideFront={hideFront}
+            powered={powered}
+            slotCovers={
+              installedSet.has('gpu')
+                ? [true, false, false, true, true, true, true]
+                : [true, true, true, true, true, true, true]
+            }
+          />
+        </StaticBatch>
       </group>
       {caseHighlight && (
         <group position={[0, 23.5, 0]}>
@@ -350,6 +362,7 @@ export function PcRig({
           powered={powered}
           installed={installedSet}
           entering={entering.includes(id)}
+          batched={batched}
           highlight={highlights[id] ?? (hovered === id ? 'hover' : selected === id ? 'select' : null)}
           showLabel={labels && (!labelOnly || labelOnly.includes(id))}
           interactive={interactive}

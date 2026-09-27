@@ -1,6 +1,13 @@
 import { useState } from 'react'
-import { useGame } from '@/state/useGame'
+import { useGame, type Quality } from '@/state/useGame'
 import { Btn, Modal } from './bits'
+
+const QUALITIES: [Quality, string][] = [
+  ['tresbas', 'Très basse'],
+  ['bas', 'Basse'],
+  ['moyen', 'Moyenne'],
+  ['eleve', 'Élevée'],
+]
 
 export function SettingsButton() {
   const [open, setOpen] = useState(false)
@@ -36,12 +43,14 @@ export function SettingsButton() {
           <div className="set-row">
             <div>
               <b>Qualité d'affichage</b>
-              <p className="faint">Baisse-la si la 3D saccade sur les postes de la salle.</p>
+              <p className="faint">
+                Baisse-la si la 3D saccade sur les postes de la salle : « Très basse » est la plus légère.
+              </p>
             </div>
             <div className="row">
-              {(['bas', 'moyen', 'eleve'] as const).map((q) => (
+              {QUALITIES.map(([q, label]) => (
                 <button key={q} className={`btn btn-sm ${quality === q ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setQuality(q)}>
-                  {q === 'bas' ? 'Basse' : q === 'moyen' ? 'Moyenne' : 'Élevée'}
+                  {label}
                 </button>
               ))}
             </div>

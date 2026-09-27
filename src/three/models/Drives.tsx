@@ -12,6 +12,7 @@ import type * as THREE from 'three'
 import { M } from '../materials'
 import { labelTexture } from '../textures'
 import { Grille, Screws } from './primitives'
+import { DYNAMIC } from '../staticBatch'
 
 /* ================================================================ */
 /*  SSD 2,5 pouces (SATA)                                            */
@@ -139,7 +140,7 @@ export function OpticalDrive({ trayOpen = 0 }: { trayOpen?: number }) {
       ))}
 
       {/* ---- Façade + tiroir (l'ensemble coulisse) ---- */}
-      <group ref={tray}>
+      <group ref={tray} userData={DYNAMIC}>
         {/* Façade plastique, légèrement plus large que le caisson */}
         <mesh position={[0, 0, -d / 2 - 0.3]} material={M.casePlastic()} castShadow>
           <boxGeometry args={[w + 0.4, h + 0.3, 0.6]} />

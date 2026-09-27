@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import { Html } from '@react-three/drei'
 import { CONNECTORS, type CableDef, type ConnectorId } from '@/data/cables'
 import type { Vec3 } from './layout'
+import { PSU_PLUG_DEPTH, psuPlugTail, psuSocket, type PsuSocketId } from './psu'
 
 /**
  * Les deux états de « cliquabilité » d'un repère.
@@ -92,15 +93,64 @@ export function Cable3D({
   })
 
   return (
-    <mesh ref={mesh} geometry={geo} castShadow={!preview} raycast={NO_HIT}>
-      <meshStandardMaterial
-        color={preview ? '#4dd0e1' : cable.color}
-        roughness={0.72}
-        metalness={0.12}
-        transparent
-        depthWrite={!preview}
-        opacity={preview ? 0.3 : 1}
-      />
+    <>
+      <mesh ref={mesh} geometry={geo} castShadow={!preview} raycast={NO_HIT}>
+        <meshStandardMaterial
+          color={preview ? '#4dd0e1' : cable.color}
+          roughness={0.72}
+          metalness={0.12}
+          transparent
+          depthWrite={!preview}
+          opacity={preview ? 0.3 : 1}
+        />
+      </mesh>
+      {/* Branché : sa fiche est enfichée dans la prise modulaire du bloc */}
+      {!preview && cable.psuPlug && <PsuPlug id={cable.psuPlug} />}
+      {!preview &&
+        cable.extraPlugs?.map((e) => (
+          <group key={e.socket}>
+            <PsuPlug id={e.socket} />
+            <Branch points={[psuPlugTail(e.socket), ...e.path]} thickness={cable.thickness} color={cable.color} />
+          </group>
+        ))}
+    </>
+  )
+}
+
+/**
+ * Fiche enfichée dans une prise modulaire du bloc d'alimentation : elle
+ * entre dans l'ouverture de la prise (le cadre reste visible autour),
+ * dépasse vers l'avant, et son clip vient s'accrocher au verrou de la
+ * prise — sous elle, le bloc étant monté ventilateur vers le sol.
+ */
+function PsuPlug({ id }: { id: PsuSocketId }) {
+  const { center, h, innerW, innerH } = psuSocket(id)
+  // la fiche s'enfonce de 0,3 cm dans la prise
+  const depth = PSU_PLUG_DEPTH + 0.3
+  return (
+    <group position={center}>
+      <mesh position={[0, 0, -PSU_PLUG_DEPTH + depth / 2]} castShadow raycast={NO_HIT}>
+        <boxGeometry args={[innerW, innerH, depth]} />
+        <meshStandardMaterial color="#15181d" roughness={0.62} metalness={0.08} />
+      </mesh>
+      {/* le clip : une languette qui descend jusqu'au verrou */}
+      <mesh position={[0, -innerH / 2 - (h - innerH) / 4, -0.45]} raycast={NO_HIT}>
+        <boxGeometry args={[0.6, (h - innerH) / 2 + 0.08, 0.7]} />
+        <meshStandardMaterial color="#15181d" roughness={0.62} metalness={0.08} />
+      </mesh>
+    </group>
+  )
+}
+
+/** Tronçon de câble qui rejoint le câble principal (seconde fiche). */
+function Branch({ points, thickness, color }: { points: Vec3[]; thickness: number; color: string }) {
+  const geo = useMemo(() => {
+    const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.2)
+    return new THREE.TubeGeometry(curve, 24, thickness, 7, false)
+  }, [points, thickness])
+  return (
+    <mesh geometry={geo} castShadow raycast={NO_HIT}>
+      <meshStandardMaterial color={color} roughness={0.72} metalness={0.12} />
     </mesh>
   )
 }

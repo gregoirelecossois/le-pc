@@ -9,7 +9,7 @@
 import { PORT_BY_ID } from '@/data/ports'
 import { PERIPHERAL_BY_ID, type Peripheral } from '@/data/peripherals'
 import type { Vec3 } from '@/three/layout'
-import { FlexCable, PeripheralModel } from '@/three/models/PeripheralParts'
+import { FlexCable, PeripheralModel, USBKEY_PLUG_OFFSET } from '@/three/models/PeripheralParts'
 import { PLUGS, Plug } from '@/three/models/Plugs'
 import { useBuild } from '@/state/useBuild'
 
@@ -30,7 +30,7 @@ function portAnchor(id: string): Vec3 {
 function PlugHead({ peri }: { peri: Peripheral }) {
   if (peri.id === 'usbkey') {
     return (
-      <group position={[0, -0.55, 1.35]}>
+      <group position={USBKEY_PLUG_OFFSET}>
         <PeripheralModel id="usbkey" />
       </group>
     )

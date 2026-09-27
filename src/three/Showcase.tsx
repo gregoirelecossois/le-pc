@@ -7,6 +7,8 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type * as THREE from 'three'
 import { BOUNDS, type Vec3 } from './layout'
+import { isLite, useGame } from '@/state/useGame'
+import { StaticBatch } from './staticBatch'
 import { CaseShell, PartModel, type PartId } from './models'
 
 /** Le boîtier n'est pas dans BOUNDS (il n'est jamais une « pièce ») : cote à part. */
@@ -31,7 +33,8 @@ const DISPLAY_ROTATION: Partial<Record<PartId, Vec3>> = {
   ram1: [0, 0, Math.PI / 2],
   ram2: [0, 0, Math.PI / 2],
   ssd: [0, -Math.PI / 2, 0],
-  gpu: [-0.5, Math.PI / 2, 0],
+  // debout, ventilateurs face à l'élève, contacts PCIe en bas, équerre à gauche
+  gpu: [-Math.PI / 2, -Math.PI / 2, 0],
   hdd: [-0.45, 0, 0],
   // incliné à 40° : posé à plat, ce boîtier très mince serait vu par la
   // tranche ; debout, il disparaîtrait à chaque demi-tour
@@ -39,6 +42,26 @@ const DISPLAY_ROTATION: Partial<Record<PartId, Vec3>> = {
   // de trois quarts : on voit la façade ET le tiroir ouvert
   odd: [-0.34, 0.42, 0],
   cmos: [0, -Math.PI / 2, 0],
+}
+
+/**
+ * Trois lampes d'appoint autour du présentoir. En rendu allégé (Basse,
+ * Très basse), seule la principale reste : l'éclairage d'ambiance du
+ * décor fait le reste.
+ */
+function ShowcaseLights() {
+  const lite = useGame((s) => isLite(s.quality))
+  return (
+    <>
+      <pointLight position={[18, 14, 34]} intensity={lite ? 2.8 : 2.4} distance={140} decay={0} color="#ffffff" />
+      {!lite && (
+        <>
+          <pointLight position={[-26, 8, 18]} intensity={1.3} distance={140} decay={0} color="#bcd8ff" />
+          <pointLight position={[6, -14, -26]} intensity={1.1} distance={140} decay={0} color="#ffd9b0" />
+        </>
+      )}
+    </>
+  )
 }
 
 export function Showcase({
@@ -65,6 +88,7 @@ export function Showcase({
   lights?: boolean
 }) {
   const g = useRef<THREE.Group>(null)
+  const lite = useGame((s) => isLite(s.quality))
   const b = id === 'case' ? CASE_BOUNDS : BOUNDS[id]
   // Les petites pièces ne sont pas agrandies à l'infini : une pile bouton
   // gonflée à la taille d'une carte mère ne serait plus reconnaissable.
@@ -80,24 +104,20 @@ export function Showcase({
       <group ref={g} scale={scale}>
         <group rotation={rot}>
           <group position={[-b.offset[0], -b.offset[1], -b.offset[2]]}>
-            {id === 'case' ? (
-              <CaseShell panelOpen={0} hideFront={false} powered={false} />
-            ) : (
-              <PartModel id={id} running powered showcase />
-            )}
+            <StaticBatch enabled={lite} deps={[id]}>
+              {id === 'case' ? (
+                <CaseShell panelOpen={0} hideFront={false} powered={false} />
+              ) : (
+                <PartModel id={id} running powered showcase />
+              )}
+            </StaticBatch>
           </group>
         </group>
       </group>
 
       {/* Éclairage « photo de produit » : la pièce doit rester lisible
           quelle que soit son orientation */}
-      {lights && (
-        <>
-          <pointLight position={[18, 14, 34]} intensity={2.4} distance={140} decay={0} color="#ffffff" />
-          <pointLight position={[-26, 8, 18]} intensity={1.3} distance={140} decay={0} color="#bcd8ff" />
-          <pointLight position={[6, -14, -26]} intensity={1.1} distance={140} decay={0} color="#ffd9b0" />
-        </>
-      )}
+      {lights && <ShowcaseLights />}
 
       {/* Socle discret */}
       {pedestal && (
@@ -167,13 +187,7 @@ export function PeriShowcase({
         </group>
       </group>
 
-      {lights && (
-        <>
-          <pointLight position={[18, 14, 34]} intensity={2.4} distance={140} decay={0} color="#ffffff" />
-          <pointLight position={[-26, 8, 18]} intensity={1.3} distance={140} decay={0} color="#bcd8ff" />
-          <pointLight position={[6, -14, -26]} intensity={1.1} distance={140} decay={0} color="#ffd9b0" />
-        </>
-      )}
+      {lights && <ShowcaseLights />}
 
       {pedestal && (
         <>

@@ -8,10 +8,10 @@
 
 import { Environment, Lightformer, OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Suspense, useEffect, useRef, type ReactNode } from 'react'
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { CAMERA_VIEWS, type CameraViewId } from './layout'
-import { useGame } from '@/state/useGame'
+import { isLite, useGame, type Quality } from '@/state/useGame'
 import { useBuild } from '@/state/useBuild'
 import { DevCapture } from './DevCapture'
 
@@ -103,9 +103,37 @@ function ViewOffset({ x }: { x: number }) {
 /*  Éclairage                                                        */
 /* ---------------------------------------------------------------- */
 
-function Lights({ quality }: { quality: 'bas' | 'moyen' | 'eleve' }) {
-  const shadows = quality !== 'bas'
+/**
+ * Éclairage allégé, pour les postes sans carte graphique.
+ *
+ * Chaque lampe se paie sur CHAQUE pixel de chaque objet : l'éclairage
+ * complet en compte sept (trois directionnelles, quatre ponctuelles). Ici
+ * il n'en reste que trois, plus un éclairage d'ambiance à deux tons (ciel
+ * clair au-dessus, sol sombre en dessous) qui ne coûte presque rien et
+ * remplace le rebond au sol et trois des lampes d'appoint.
+ */
+function LiteLights() {
+  return (
+    <>
+      <ambientLight intensity={1.05} />
+      {/* le ton « sol » joue le rebond sur la table : il éclaire les dessous */}
+      <hemisphereLight args={['#e4ecff', '#5a6479', 1.6]} />
+      {/* Lumière principale, trois-quarts avant gauche */}
+      <directionalLight position={[70, 90, 55]} intensity={2.8} color="#fff6e8" />
+      {/* Contre-jour froid, décolle les pièces du fond */}
+      <directionalLight position={[-60, 45, -70]} intensity={1.2} color="#9ec8ff" />
+      {/* La seule lampe d'appoint gardée : sans elle l'intérieur du boîtier
+          reste noir */}
+      <pointLight position={[26, 30, 4]} intensity={1.9} distance={130} decay={0} color="#dbe8ff" />
+    </>
+  )
+}
+
+function Lights({ quality }: { quality: Quality }) {
+  const shadows = quality === 'moyen' || quality === 'eleve'
   const mapSize = quality === 'eleve' ? 2048 : 1024
+
+  if (isLite(quality)) return <LiteLights />
 
   return (
     <>
@@ -140,9 +168,9 @@ function Lights({ quality }: { quality: 'bas' | 'moyen' | 'eleve' }) {
 }
 
 /** Panneaux lumineux : ce sont eux qui donnent les reflets sur le métal. */
-function StudioEnvironment({ quality }: { quality: 'bas' | 'moyen' | 'eleve' }) {
+function StudioEnvironment({ quality }: { quality: Quality }) {
   return (
-    <Environment resolution={quality === 'eleve' ? 256 : 128} frames={1} background={false}>
+    <Environment resolution={quality === 'eleve' ? 256 : quality === 'tresbas' ? 64 : 128} frames={1} background={false}>
       <color attach="background" args={['#101318']} />
       {/* Grand panneau au-dessus : reflet allongé sur les surfaces brossées */}
       <Lightformer form="rect" intensity={3.2} position={[0, 12, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[14, 8, 1]} color="#ffffff" />
@@ -182,6 +210,38 @@ function Ground({ shadows }: { shadows: boolean }) {
 /*  Canvas                                                           */
 /* ---------------------------------------------------------------- */
 
+/** Vues qui regardent la machine par en dessous : l'orbite y passe sous l'horizon. */
+const UNDER_VIEWS: CameraViewId[] = ['dessous']
+const ABOVE_LIMIT = Math.PI / 2 + 0.28
+const UNDER_LIMIT = Math.PI - 0.2
+
+/**
+ * Limite basse de l'orbite. Elle se relâche dès qu'on demande une vue de
+ * dessous ; au retour, on attend que la caméra soit remontée avant de la
+ * resserrer, sinon elle sauterait d'un coup à la limite.
+ */
+function usePolarLimit(view: CameraViewId) {
+  const under = UNDER_VIEWS.includes(view)
+  const [limit, setLimit] = useState(under ? UNDER_LIMIT : ABOVE_LIMIT)
+  useEffect(() => {
+    if (under) {
+      setLimit(UNDER_LIMIT)
+      return
+    }
+    const t = setTimeout(() => setLimit(ABOVE_LIMIT), 1400)
+    return () => clearTimeout(t)
+  }, [under])
+  return limit
+}
+
+/** Densité de pixels du rendu 3D, par qualité. */
+const DPR: Record<Quality, number | [number, number]> = {
+  tresbas: 0.75,
+  bas: 1,
+  moyen: [1, 1.5],
+  eleve: [1, 2],
+}
+
 export interface StageProps {
   children: ReactNode
   view?: CameraViewId
@@ -209,14 +269,18 @@ export function Stage({
 }: StageProps) {
   const quality = useGame((s) => s.quality)
   const controls = useRef<any>(null)
-  const shadows = quality !== 'bas'
+  const shadows = quality === 'moyen' || quality === 'eleve'
+  const maxPolar = usePolarLimit(view)
 
   return (
     <Canvas
       shadows={shadows ? 'soft' : false}
-      dpr={quality === 'eleve' ? [1, 2] : quality === 'moyen' ? [1, 1.5] : 1}
+      // « Très basse » : l'image est calculée aux trois quarts de la taille
+      // de l'écran puis agrandie. Presque deux fois moins de pixels à
+      // éclairer ; les textes et boutons, eux, restent nets (ils sont en HTML).
+      dpr={DPR[quality]}
       gl={{
-        antialias: quality !== 'bas',
+        antialias: quality === 'moyen' || quality === 'eleve',
         powerPreference: 'high-performance',
         // en développement : permet la capture du canvas pour vérifier le rendu
         preserveDrawingBuffer: import.meta.env.DEV,
@@ -250,7 +314,7 @@ export function Stage({
         minDistance={26}
         maxDistance={230}
         minPolarAngle={0.15}
-        maxPolarAngle={Math.PI / 2 + 0.28}
+        maxPolarAngle={maxPolar}
         makeDefault
       />
       <CameraRig view={view} seq={viewSeq} controls={controls} enabled={controlsEnabled} />

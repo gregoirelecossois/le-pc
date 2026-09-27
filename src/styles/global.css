@@ -703,6 +703,11 @@ button {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* Chaque rangée prend la hauteur de ses cartes. Sans cela, quand l'écran
+     manque de hauteur, la grille écrasait les cartes (elles masquent ce qui
+     dépasse) au lieu de défiler : la ligne « Jouer · durée · XP » et la
+     mention « Termine le chapitre… » disparaissaient. */
+  grid-auto-rows: max-content;
   gap: 16px;
   align-content: start;
   padding-right: 6px;
@@ -712,8 +717,19 @@ button {
   align-items: center;
   gap: 10px;
   padding-top: 16px;
+  /* place réservée aux boutons ronds flottants (réglages, enseignant) */
+  padding-right: 60px;
   border-top: 1px solid var(--line);
   margin-top: 14px;
+}
+
+/* Écrans de 1100 à 1400 px : des cartes plus étroites, pour que les dix
+   ateliers tiennent à l'écran (5 colonnes à 1280 et 1366 px). Plus étroit
+   encore, elles passeraient sur trois lignes : on reste à 3 colonnes. */
+@media (min-width: 1100px) and (max-width: 1400px) {
+  .map-grid {
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  }
 }
 
 .chapcard {
@@ -786,9 +802,47 @@ button {
 .chapcard-foot {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   margin-top: 14px;
   font-size: 13px;
+}
+
+/* Écrans peu hauts (portables, vidéoprojecteurs, affichage agrandi à
+   125 %) : des cartes plus serrées, pour voir tout le parcours d'un coup. */
+@media (max-height: 820px) {
+  .map {
+    padding-top: 14px;
+  }
+  .map-head {
+    margin-bottom: 12px;
+  }
+  .map-grid {
+    gap: 12px;
+  }
+  .chapcard {
+    padding: 13px 18px;
+  }
+  .chapcard-top {
+    margin-bottom: 7px;
+  }
+  .chapcard-icon {
+    font-size: 22px;
+  }
+  .chapcard-title {
+    font-size: 17.5px;
+  }
+  .chapcard-sub {
+    font-size: 14px;
+    min-height: 0;
+  }
+  .chapcard-foot {
+    margin-top: 9px;
+  }
+  .map-foot {
+    padding-top: 10px;
+    margin-top: 10px;
+  }
 }
 
 /* ================================================================
@@ -799,6 +853,7 @@ button {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-auto-rows: max-content;
   gap: 15px;
   align-content: start;
 }
