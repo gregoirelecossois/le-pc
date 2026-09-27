@@ -60,7 +60,7 @@ export function PartModel({ id, running = false, powered = false, installed, sho
     case 'hdd':
       return <Hdd />
     case 'gpu':
-      return <Gpu fanSpeed={spin * 0.8} ledOn={powered} />
+      return <Gpu fanSpeed={spin * 0.8} />
     case 'psu':
       return <Psu fanSpeed={spin * 0.6} />
     case 'fanFront':

@@ -9,6 +9,7 @@ import { useMemo, useRef, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { M } from '../materials'
 import type { Vec3 } from '../layout'
+import { DYNAMIC } from '../staticBatch'
 
 /* ---------------------------------------------------------------- */
 /*  Vis                                                              */
@@ -200,7 +201,7 @@ export function FanUnit({
       ))}
 
       {/* Rotor */}
-      <group ref={rotor} position={[0, 0, 0]}>
+      <group ref={rotor} position={[0, 0, 0]} userData={DYNAMIC}>
         {/* Moyeu central, un simple cylindre aligné sur l'axe de rotation (Z) */}
         <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[hubR, hubR, thickness * 0.9, 24]} />

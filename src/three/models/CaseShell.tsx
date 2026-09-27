@@ -5,12 +5,14 @@
  */
 
 import { useMemo } from 'react'
-import type * as THREE from 'three'
+import * as THREE from 'three'
 import { Instance, Instances } from '@react-three/drei'
 import { CASE, MB, MB_POINTS } from '../layout'
 import type { Vec3 } from '../layout'
 import { M, ledMaterial } from '../materials'
 import { Grille, Screws } from './primitives'
+import { DYNAMIC } from '../staticBatch'
+import { isLite, useGame } from '@/state/useGame'
 
 type Rect = [x0: number, x1: number, y0: number, y1: number]
 
@@ -109,6 +111,69 @@ const PSU_X1 = 8.6
 const PSU_Y0 = 0.6
 const PSU_Y1 = 9.4
 
+/* Ouverture du plancher sous le ventilateur de l'alimentation (voir `Psu`). */
+const VENT_X0 = -5.3
+const VENT_X1 = 7.3
+const VENT_Z0 = 9.8
+const VENT_Z1 = 21.0
+
+/** Plancher plein autour de l'ouverture : [x0, x1, z0, z1]. */
+const FLOOR_RECTS: Rect[] = [
+  [-HW, VENT_X0, -HD, HD],
+  [VENT_X1, HW, -HD, HD],
+  [VENT_X0, VENT_X1, -HD, VENT_Z0],
+  [VENT_X0, VENT_X1, VENT_Z1, HD],
+]
+
+/** Tôle perforée de trous hexagonaux, qui ferme l'ouverture. */
+function psuVentGeometry() {
+  const w = VENT_X1 - VENT_X0
+  const d = VENT_Z1 - VENT_Z0
+  const shape = new THREE.Shape()
+  shape.moveTo(-w / 2, -d / 2)
+  shape.lineTo(w / 2, -d / 2)
+  shape.lineTo(w / 2, d / 2)
+  shape.lineTo(-w / 2, d / 2)
+  shape.closePath()
+  // de grandes alvéoles : on doit voir le ventilateur au travers
+  const r = 0.68
+  const dx = 1.36
+  const dy = 1.18
+  for (let row = 0; ; row++) {
+    const y = -d / 2 + 0.7 + row * dy
+    if (y > d / 2 - 0.7) break
+    for (let col = 0; ; col++) {
+      const x = -w / 2 + 0.7 + col * dx + (row % 2) * (dx / 2)
+      if (x > w / 2 - 0.7) break
+      const hole = new THREE.Path()
+      for (let k = 0; k < 6; k++) {
+        const a = (k * Math.PI) / 3 + Math.PI / 6
+        if (k === 0) hole.moveTo(x + r * Math.cos(a), y + r * Math.sin(a))
+        else hole.lineTo(x + r * Math.cos(a), y + r * Math.sin(a))
+      }
+      hole.closePath()
+      shape.holes.push(hole)
+    }
+  }
+  const g = new THREE.ExtrudeGeometry(shape, { depth: CASE.wall, bevelEnabled: false, steps: 1 })
+  // à plat, épaisseur vers le haut
+  g.rotateX(-Math.PI / 2)
+  return g
+}
+
+/* Support du SSD 2,5" : dessus du berceau, et son étendue en z. */
+const SSD_TRAY_Y = 6.6
+const SSD_TRAY_Z = -13.4
+const SSD_TRAY_Z0 = SSD_TRAY_Z - 5.5
+const SSD_TRAY_Z1 = SSD_TRAY_Z + 5.5
+/** Le berceau, ajouré au milieu : [x0, x1, z0, z1]. */
+const SSD_TRAY_RECTS: Rect[] = [
+  [-6.6, -3.8, SSD_TRAY_Z0, SSD_TRAY_Z1],
+  [1.8, 4.6, SSD_TRAY_Z0, SSD_TRAY_Z1],
+  [-3.8, 1.8, SSD_TRAY_Z0, SSD_TRAY_Z0 + 1.5],
+  [-3.8, 1.8, SSD_TRAY_Z1 - 1.5, SSD_TRAY_Z1],
+]
+
 const REAR_RECTS: Rect[] = [
   // bande basse sous l'alimentation
   [-HW, HW, 0, PSU_Y0],
@@ -167,17 +232,22 @@ export function CaseShell({
   }, [])
 
   const covers = slotCovers ?? [true, true, true, true, true, true, true]
+  const psuVent = useMemo(psuVentGeometry, [])
+  // Rendu allégé : verre sans transmission (voir M.glassLite)
+  const liteGlass = useGame((s) => isLite(s.quality))
 
   return (
     <group name="case">
-      {/* ---------------- Plancher ---------------- */}
-      <mesh position={[0, CASE.wall / 2, 0]} material={steel} receiveShadow castShadow>
-        <boxGeometry args={[CASE.width, CASE.wall, CASE.depth]} />
-      </mesh>
-      {/* Filtre à poussière sous l'alimentation */}
-      <group position={[1.0, 0.14, 15.5]} rotation={[Math.PI / 2, 0, 0]}>
-        <Grille width={13} height={12} step={0.8} hole={0.5} depth={0.1} color="#0a0b0e" />
-      </group>
+      {/* ---------------- Plancher ----------------
+          Découpé sous l'alimentation : son ventilateur aspire l'air par le
+          dessous, à travers une tôle perforée. Vue de dessous, on le voit
+          tourner. */}
+      {FLOOR_RECTS.map(([x0, x1, z0, z1], i) => (
+        <mesh key={i} position={[(x0 + x1) / 2, CASE.wall / 2, (z0 + z1) / 2]} material={steel} receiveShadow castShadow>
+          <boxGeometry args={[x1 - x0, CASE.wall, z1 - z0]} />
+        </mesh>
+      ))}
+      <mesh geometry={psuVent} position={[(VENT_X0 + VENT_X1) / 2, 0, (VENT_Z0 + VENT_Z1) / 2]} material={steel} receiveShadow />
       {/* Pieds */}
       {(
         [
@@ -320,7 +390,9 @@ export function CaseShell({
         ))}
       </Instances>
 
-      {/* ---------------- Cage des disques ---------------- */}
+      {/* ---------------- Cage des disques ----------------
+          Ouverte sur le dessus : on voit le disque dur, et on le vise
+          facilement. */}
       <group>
         {/* plancher de la baie 3,5" */}
         <mesh position={[-1.0, 1.1, -12.0]} material={inner} castShadow receiveShadow>
@@ -331,10 +403,33 @@ export function CaseShell({
             <boxGeometry args={[0.16, 3.2, 16]} />
           </mesh>
         ))}
-        {/* berceau 2,5" : la tablette sur laquelle se visse le SSD SATA */}
-        <mesh position={[-1.0, 4.28, -12.0]} material={inner} castShadow receiveShadow>
-          <boxGeometry args={[11.6, 0.16, 16]} />
-        </mesh>
+      </group>
+
+      {/* ---------------- Support du SSD 2,5" ----------------
+          Un berceau en tôle, ajouré au milieu, porté par quatre pattes sur
+          les montants de la cage, un peu au-dessus du disque dur. Décalé
+          vers l'avant : l'arrière du disque, où se branchent ses câbles
+          SATA, reste dégagé. */}
+      <group>
+        {SSD_TRAY_RECTS.map(([x0, x1, z0, z1], i) => (
+          <mesh key={i} position={[(x0 + x1) / 2, SSD_TRAY_Y - 0.08, (z0 + z1) / 2]} material={inner} castShadow receiveShadow>
+            <boxGeometry args={[x1 - x0, 0.16, z1 - z0]} />
+          </mesh>
+        ))}
+        {/* rebords qui tiennent le SSD sur les côtés */}
+        {[-1.0 - 3.62, -1.0 + 3.62].map((x) => (
+          <mesh key={x} position={[x, SSD_TRAY_Y + 0.3, SSD_TRAY_Z]} material={inner} castShadow>
+            <boxGeometry args={[0.16, 0.6, 9.2]} />
+          </mesh>
+        ))}
+        {/* pattes posées sur les montants de la cage */}
+        {[-6.6, 4.6].flatMap((x) =>
+          [SSD_TRAY_Z0 + 0.6, SSD_TRAY_Z1 - 0.6].map((z) => (
+            <mesh key={`${x}${z}`} position={[x, (4.2 + SSD_TRAY_Y) / 2, z]} material={inner} castShadow>
+              <boxGeometry args={[0.16, SSD_TRAY_Y - 4.2, 0.9]} />
+            </mesh>
+          )),
+        )}
       </group>
 
       {/* ---------------- Baie 5,25" (lecteur de disques) ---------------- */}
@@ -354,6 +449,7 @@ export function CaseShell({
       {/* ---------------- Panneau latéral vitré ---------------- */}
       {!hidePanel && panelOpen < 0.999 && (
         <group
+          userData={DYNAMIC}
           // fermé : plaqué sur le flanc — ouvert : posé à plat à côté de la tour,
           // comme on le fait vraiment quand on ouvre une machine
           position={[
@@ -363,7 +459,7 @@ export function CaseShell({
           ]}
           rotation={[0, 0, (panelOpen * Math.PI) / 2]}
         >
-          <mesh material={M.glass()}>
+          <mesh material={liteGlass ? M.glassLite() : M.glass()}>
             <boxGeometry args={[0.5, H - 1.4, CASE.depth - 1.4]} />
           </mesh>
           <mesh material={steel} position={[-0.25, 0, 0]}>

@@ -30,6 +30,7 @@ import type { CameraViewId, Vec3 } from '@/three/layout'
 import {
   FlexCable,
   PeripheralModel,
+  USBKEY_PLUG_OFFSET,
   PERIPHERAL_MODELS,
   type PeripheralModelId,
 } from '@/three/models/PeripheralParts'
@@ -225,7 +226,7 @@ function LiveCable({
 function PlugHead({ peri }: { peri: Peripheral }) {
   if (peri.id === 'usbkey') {
     return (
-      <group position={[0, -0.55, 1.35]}>
+      <group position={USBKEY_PLUG_OFFSET}>
         <PeripheralModel id="usbkey" />
       </group>
     )

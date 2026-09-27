@@ -8,6 +8,7 @@
 
 import { MB } from '@/three/layout'
 import type { Vec3 } from '@/three/layout'
+import { gpuPort } from '@/three/gpu'
 
 export type PortKind =
   | 'usb2'
@@ -174,15 +175,17 @@ export const PORTS: Port[] = [
     color: '#8fb8e8',
   },
 
-  /* ---- Sorties vidéo de la carte graphique ---- */
+  /* ---- Sorties vidéo de la carte graphique : alignées le long de son
+          équerre, HDMI côté carte mère puis les DisplayPort (le 3e, au
+          bout, n'est pas utilisé par les ateliers). Leur position vient du
+          modèle 3D (three/gpu.ts). ---- */
   {
     id: 'dp-gpu-1',
     kind: 'displayport',
     label: 'DisplayPort (carte graphique)',
     hint: "LA bonne sortie vidéo quand une carte graphique est installée.",
     host: 'gpu',
-    position: [x(1.6), 21.4, 21.9],
-    size: [1.7, 0.75, 1.4],
+    ...gpuPort(1),
     color: '#101318',
     inner: '#2b313a',
   },
@@ -192,8 +195,7 @@ export const PORTS: Port[] = [
     label: 'HDMI (carte graphique)',
     hint: "Sortie vidéo de la carte graphique : c'est ici qu'on branche l'écran.",
     host: 'gpu',
-    position: [x(1.6), 20.3, 21.9],
-    size: [1.7, 0.7, 1.4],
+    ...gpuPort(0),
     color: '#101318',
     inner: '#2b313a',
   },
@@ -203,8 +205,7 @@ export const PORTS: Port[] = [
     label: 'DisplayPort (carte graphique)',
     hint: 'Deuxième sortie : on peut brancher un second écran.',
     host: 'gpu',
-    position: [x(1.6), 19.2, 21.9],
-    size: [1.7, 0.75, 1.4],
+    ...gpuPort(2),
     color: '#101318',
     inner: '#2b313a',
   },
@@ -216,8 +217,9 @@ export const PORTS: Port[] = [
     label: "Prise secteur (C13)",
     hint: "L'arrivée du courant 230 V depuis la prise murale. Juste à côté : l'interrupteur O / I.",
     host: 'psu',
-    position: [-3.6, 6.2, 22.6],
-    size: [2.6, 2.4, 1.2],
+    // à droite de la grille alvéolée du bloc modulaire (voir `Psu`)
+    position: [5.74, 7.2, 22.66],
+    size: [3.6, 2.4, 1.2],
     color: '#0d0f13',
   },
 ]

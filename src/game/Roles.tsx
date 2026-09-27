@@ -14,6 +14,7 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { COMPONENTS, lowerName, soloShortName, type ComponentId } from '@/data/components'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
+import { isLite, useGame } from '@/state/useGame'
 import { Showcase } from '@/three/Showcase'
 import { CAMERA_VIEWS } from '@/three/layout'
 import { asPart } from '@/three/models'
@@ -185,6 +186,7 @@ export function RolesScene() {
   const { choices, answered, order, index } = useRoles()
   const { columns, size } = useColumns()
   const [hover, setHover] = useState<ComponentId | null>(null)
+  const lite = useGame((s) => isLite(s.quality))
   if (phase !== 'play' || choices.length < 4) return null
   const good = order[index]
 
@@ -193,9 +195,14 @@ export function RolesScene() {
       {/* Un seul éclairage pour toute la rangée : les présentoirs coupent
           le leur, sinon quatre pièces feraient douze lampes ponctuelles.
           Portée courte : au-delà, la lumière viendrait blanchir le sol. */}
-      <pointLight position={[0, 40, 46]} intensity={2.2} distance={78} decay={0} color="#ffffff" />
-      <pointLight position={[-46, 40, 34]} intensity={1.5} distance={72} decay={0} color="#bcd8ff" />
-      <pointLight position={[46, 30, 30]} intensity={1.3} distance={72} decay={0} color="#ffd9b0" />
+      <pointLight position={[0, 40, 46]} intensity={lite ? 2.6 : 2.2} distance={78} decay={0} color="#ffffff" />
+      {/* Rendu allégé : la lampe principale suffit, l'ambiance du décor fait le reste */}
+      {!lite && (
+        <>
+          <pointLight position={[-46, 40, 34]} intensity={1.5} distance={72} decay={0} color="#bcd8ff" />
+          <pointLight position={[46, 30, 30]} intensity={1.3} distance={72} decay={0} color="#ffd9b0" />
+        </>
+      )}
 
       {choices.map((id, i) => {
         const part = asPart(id)

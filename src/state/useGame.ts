@@ -25,6 +25,20 @@ import { sfx } from '@/audio/sfx'
 
 export type Screen = 'accueil' | 'carte' | 'jeu' | 'fiche' | 'badges'
 
+/**
+ * Qualité d'affichage. « Basse » est le réglage par défaut ; « Très basse »
+ * est le recours des postes sans carte graphique qui saccadent encore,
+ * au prix d'une image moins fine. Voir `Stage.tsx` et `staticBatch.tsx`.
+ */
+export type Quality = 'tresbas' | 'bas' | 'moyen' | 'eleve'
+
+/**
+ * Rendu allégé (« Basse » et « Très basse ») : éclairage réduit, pièces
+ * immobiles fusionnées, verre sans transmission. L'image reste la même ;
+ * « Très basse » y ajoute seulement une résolution réduite.
+ */
+export const isLite = (q: Quality) => q === 'bas' || q === 'tresbas'
+
 export interface ChapterResult {
   stars: 0 | 1 | 2 | 3
   bestScore: number
@@ -45,7 +59,7 @@ interface GameState {
   /** File d'attente des notifications (badge / XP) à afficher */
   toasts: { id: number; kind: 'xp' | 'badge' | 'info' | 'error'; text: string; icon?: string }[]
   sound: boolean
-  quality: 'bas' | 'moyen' | 'eleve'
+  quality: Quality
   showHelp: boolean
   /**
    * Raccourcis d'enseignant : accès direct à n'importe quel chapitre.
@@ -63,7 +77,7 @@ interface GameState {
   toast: (t: { kind: 'xp' | 'badge' | 'info' | 'error'; text: string; icon?: string }) => void
   dropToast: (id: number) => void
   setSound: (v: boolean) => void
-  setQuality: (q: 'bas' | 'moyen' | 'eleve') => void
+  setQuality: (q: Quality) => void
   setShowHelp: (v: boolean) => void
   setDev: (v: boolean) => void
   /** Marque tout le parcours comme terminé (démonstration en classe). */
@@ -183,7 +197,7 @@ export const useGame = create<GameState>()(
       chapter: null,
       toasts: [],
       sound: true,
-      quality: 'eleve',
+      quality: 'bas',
       showHelp: true,
       dev: false,
       ...EMPTY,
@@ -280,19 +294,24 @@ export const useGame = create<GameState>()(
     }),
     {
       name: CLE,
-      version: 2,
+      version: 3,
       /**
        * v1 -> v2 : le chapitre 7 « Les périphériques » a été scindé en deux
        * (« Nomme les périphériques » = peripheriques, « Branche les
        * périphériques » = branchement). Un parcours déjà terminé sous v1
        * avait fait les deux d'un coup : on reporte la réussite sur le
        * nouveau chapitre pour ne pas re-verrouiller la suite.
+       *
+       * v2 -> v3 : le réglage par défaut passe de « Élevée » à « Basse »,
+       * qui tourne mieux sur les postes de la salle. Presque tous gardaient
+       * l'ancien défaut sans l'avoir choisi : on les passe une fois au nouveau.
        */
       migrate: (state: unknown, version: number) => {
         const s = state as GameState
         if (version < 2 && s?.results?.peripheriques?.done && !s.results.branchement) {
           s.results = { ...s.results, branchement: { ...s.results.peripheriques } }
         }
+        if (version < 3 && s) s.quality = 'bas'
         return s
       },
       storage: createJSONStorage(() => safeStorage),

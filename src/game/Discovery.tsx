@@ -6,7 +6,7 @@
  * qu'il reste à trouver : cliquer un « ??? » ne découvre rien.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
 import { COMPONENTS, COMPONENT_IDS, type ComponentId } from '@/data/components'
 import { useGame } from '@/state/useGame'
@@ -30,6 +30,14 @@ const useFound = create<{ found: ComponentId[] }>()(() => ({ found: [] }))
 
 /** Surbrillance temporaire du coup de pouce « Montre-m'en une ». */
 const useHint = create<{ flash: Partial<Record<ComponentId, HighlightKind>> }>()(() => ({ flash: {} }))
+
+/**
+ * Secondes de recherche sans nouvelle découverte avant que le bouton
+ * « J'ai besoin d'aide » s'affiche. Seul compte le temps passé à chercher :
+ * lire une fiche ou la présentation d'une pièce ne fait pas avancer le
+ * compteur.
+ */
+const HELP_AFTER_S = 60
 
 /**
  * Enregistre une découverte. Renvoie `true` si c'est la PREMIÈRE fois :
@@ -94,6 +102,7 @@ const VIEWS: { id: CameraViewId; label: string }[] = [
   { id: 'inside', label: "L'intérieur" },
   { id: 'cpuZone', label: 'Zone processeur' },
   { id: 'bottom', label: 'Bas du boîtier' },
+  { id: 'dessous', label: 'Dessous' },
   { id: 'rear', label: 'Arrière' },
 ]
 
@@ -136,7 +145,35 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
     return () => clearTimeout(t)
   }, [ex.busy])
 
+  // Coup de pouce automatique : un élève bloqué n'ose pas toujours
+  // chercher le petit bouton de la barre du bas.
+  const idle = useRef(0)
+  const [needHelp, setNeedHelp] = useState(false)
+  useEffect(() => {
+    idle.current = 0
+    setNeedHelp(false)
+  }, [found.length])
+  useEffect(() => {
+    if (ex.phase !== 'play' || ex.busy) return
+    const t = setInterval(() => {
+      if (useBuild.getState().selected || useExercise.getState().feedback) return
+      idle.current += 1
+      if (idle.current >= HELP_AFTER_S) setNeedHelp(true)
+    }, 1000)
+    return () => clearInterval(t)
+  }, [ex.phase, ex.busy])
+
   const remaining = COMPONENT_IDS.filter((id) => !found.includes(id))
+
+  // Le coup de pouce DÉSIGNE la pièce, il ne la découvre pas : c'est
+  // toujours à l'élève de cliquer dessus.
+  const showOne = () => {
+    const target = remaining[0]
+    if (!target) return
+    setBuild({ explode: Math.max(explode, 0.45) })
+    useHint.setState({ flash: { [target]: 'target' } })
+    setTimeout(() => useHint.setState({ flash: {} }), 2600)
+  }
 
   return (
     <>
@@ -229,25 +266,25 @@ export function DiscoveryUi({ onView }: { onView: (v: CameraViewId) => void }) {
             <div className="hintbar">
               <span>👆</span> Clique sur une pièce de la machine pour découvrir sa fiche
               {remaining.length > 0 && (
-                <Btn
-                  size="sm"
-                  variant="ghost"
-                  // Le coup de pouce DÉSIGNE la pièce, il ne la découvre pas :
-                  // c'est toujours à l'élève de cliquer dessus.
-                  onClick={() => {
-                    const target = remaining[0]
-                    setBuild({ explode: Math.max(explode, 0.45) })
-                    useHint.setState({ flash: { [target]: 'target' } })
-                    setTimeout(() => useHint.setState({ flash: {} }), 2600)
-                  }}
-                >
+                <Btn size="sm" variant="ghost" onClick={showOne}>
                   Montre-m'en une
                 </Btn>
               )}
             </div>
           )}
+
+          {/* Une minute sans rien trouver : l'aide vient au-devant de l'élève.
+              Il reste affiché jusqu'à la prochaine découverte. */}
+          {needHelp && !selected && remaining.length > 0 && (
+            <div className="help-call">
+              <Btn variant="primary" onClick={showOne}>
+                🙋 J'ai besoin d'aide&nbsp;: montre-moi
+              </Btn>
+            </div>
+          )}
         </>
-      )}
+      )}
+
       <ExerciseEnd result={result} />
     </>
   )

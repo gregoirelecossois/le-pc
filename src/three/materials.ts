@@ -67,6 +67,25 @@ export const M = {
       }),
     ),
 
+  /**
+   * Le même verre sans transmission, pour le rendu allégé (Basse, Très basse).
+   * La transmission oblige à dessiner toute la scène une seconde fois, à
+   * chaque image, pour savoir ce qu'on voit à travers la vitre. Un verre
+   * simplement teinté et semi-transparent donne presque le même rendu.
+   */
+  glassLite: () =>
+    mat('glassLite', () =>
+      std({
+        color: '#2a3138',
+        metalness: 0.1,
+        roughness: 0.08,
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    ),
+
   /* ---------- Circuits imprimés ---------- */
 
   motherboardPcb: () =>

@@ -5,22 +5,28 @@
 
 import { MB, MB_POINTS, SLOTS } from '@/three/layout'
 import type { CameraViewId, Vec3 } from '@/three/layout'
+import { psuPlugTail, type PsuSocketId } from '@/three/psu'
+import { gpuPowerSocket } from '@/three/gpu'
+
+/** Juste devant la prise 8 broches de la carte graphique : là où arrive le câble PCIe. */
+const GPU_POWER_IN: Vec3 = (([x, y, z]) => [x + 0.3, y, z] as Vec3)(gpuPowerSocket())
 
 const S = MB.surfaceX
 
 /**
- * Point de sortie du faisceau : posé SUR le passe-fil rond du bloc
- * d'alimentation, là où les câbles sortent vraiment. Les torons partent
- * donc du bloc en le touchant, ils ne flottent plus à côté.
- *
- * Le passe-fil est sur la face avant du bloc (local z = -d/2 - 0.4, avec
- * d = 14 dans le modèle `Psu`) ; en coordonnées monde cela donne :
+ * Le bloc d'alimentation est MODULAIRE : chaque câble part de SA prise sur
+ * la face avant du bloc (CARTE MÈRE, CPU, PCIe, SATA). Le câble démarre au
+ * dos de sa fiche enfichée, puis sort tout droit de la prise avant de
+ * rejoindre le circuit de cheminement.
  */
-export const PSU_OUT: Vec3 = [
-  SLOTS.psu.position[0] + 0.4,
-  SLOTS.psu.position[1] + 0.4,
-  SLOTS.psu.position[2] - 7.9,
-]
+const fromPsu = (id: PsuSocketId): Vec3 => psuPlugTail(id)
+/** Point à `d` cm devant la fiche : le câble sort droit de la prise. */
+const outOf = (id: PsuSocketId, d = 1.6): Vec3 => {
+  const t = psuPlugTail(id)
+  return [t[0], t[1], t[2] - d]
+}
+/** Là où la fiche 10 broches du câble carte mère rejoint la 18 broches. */
+const ATX_JOIN: Vec3 = outOf('mb18', 2.5)
 
 /**
  * Circuit de cheminement des câbles.
@@ -70,7 +76,8 @@ export interface Connector {
 export const CONNECTORS: Record<ConnectorId, Connector> = {
   atx24: { id: 'atx24', label: 'Connecteur 24 broches', position: [S + 1.3, MB_POINTS.atx24.y, MB_POINTS.atx24.z], radius: 1.9, host: 'motherboard' },
   eps8: { id: 'eps8', label: 'Connecteur 8 broches (CPU)', position: [S + 1.2, MB_POINTS.eps8.y, MB_POINTS.eps8.z], radius: 1.5, host: 'motherboard' },
-  pcie8: { id: 'pcie8', label: 'Connecteur PCIe de la carte graphique', position: [SLOTS.gpu.position[0] + 2.6, SLOTS.gpu.position[1] + 2.2, SLOTS.gpu.position[2] - 9.4], radius: 1.6, host: 'gpu' },
+  // la prise 8 broches, sur la tranche de la carte tournée vers la vitre (voir three/gpu.ts)
+  pcie8: { id: 'pcie8', label: 'Connecteur PCIe de la carte graphique', position: GPU_POWER_IN, radius: 1.6, host: 'gpu' },
   sataPower: { id: 'sataPower', label: 'Alimentation du disque dur', position: [SLOTS.hdd.position[0] + 0.6, SLOTS.hdd.position[1] - 0.7, SLOTS.hdd.position[2] + 7.6], radius: 1.4, host: 'hdd' },
   sataData: { id: 'sataData', label: 'Données du disque dur', position: [SLOTS.hdd.position[0] - 2.6, SLOTS.hdd.position[1] - 0.7, SLOTS.hdd.position[2] + 7.6], radius: 1.2, host: 'hdd' },
   sataMb: { id: 'sataMb', label: 'Ports SATA de la carte mère', position: [S + 1.0, MB_POINTS.sata.y, MB_POINTS.sata.z], radius: 1.6, host: 'motherboard' },
@@ -87,6 +94,13 @@ export interface CableDef {
   /** D'où il part */
   fromLabel: string
   from: Vec3
+  /** Prise modulaire du bloc d'alimentation où est enfichée sa fiche de départ */
+  psuPlug?: PsuSocketId
+  /**
+   * Fiches supplémentaires côté alimentation (le 24 broches arrive sur
+   * DEUX prises, 18 + 10) : chacune rejoint le câble par son propre trajet.
+   */
+  extraPlugs?: { socket: PsuSocketId; path: Vec3[] }[]
   /** Où il doit arriver */
   to: ConnectorId
   color: string
@@ -121,8 +135,16 @@ export const CABLES: CableDef[] = [
     id: 'atx24',
     name: 'Câble 24 broches',
     carries: 'Il alimente la carte mère et tout ce qui est branché dessus.',
-    fromLabel: "Bloc d'alimentation",
-    from: PSU_OUT,
+    fromLabel: 'Alimentation : prises CARTE MÈRE',
+    from: fromPsu('mb18'),
+    psuPlug: 'mb18',
+    extraPlugs: [
+      {
+        socket: 'mb10',
+        // la fiche 10 broches rejoint la 18 broches pour ne faire qu'un câble
+        path: [outOf('mb10'), [1.6, 2.95, 5.1], ATX_JOIN],
+      },
+    ],
     to: 'atx24',
     color: '#1b1e24',
     thickness: 0.55,
@@ -130,17 +152,18 @@ export const CABLES: CableDef[] = [
     wrongHint: "Ce n'est pas le bon : le 24 broches va sur le grand connecteur au bord de la carte mère, à côté de la mémoire.",
     order: 1,
     what: "On commence par le plus gros : le câble qui alimente la carte mère elle-même.",
-    fromHint: "Clique sur le faisceau qui sort du bloc d'alimentation, en bas de la machine.",
+    fromHint: "Clique sur les prises « CARTE MÈRE », sur la face avant du bloc d'alimentation, en bas de la machine.",
     toHint: "Clique maintenant sur le grand connecteur 24 broches, sur le bord droit de la carte mère.",
     view: 'cablage',
-    waypoints: [DIVE, EDGE_LOW, EDGE_MID, [EDGE_X, 30, FRONT_Z], [-5.2, 30, -3], [-4.4, 30, -1.4]],
+    waypoints: [outOf('mb18'), DIVE, EDGE_LOW, EDGE_MID, [EDGE_X, 30, FRONT_Z], [-5.2, 30, -3], [-4.4, 30, -1.4]],
   },
   {
     id: 'eps8',
     name: 'Câble 8 broches processeur',
     carries: "Il apporte le courant 12 V dédié au processeur.",
-    fromLabel: "Bloc d'alimentation",
-    from: PSU_OUT,
+    fromLabel: 'Alimentation : prise CPU',
+    from: fromPsu('cpu1'),
+    psuPlug: 'cpu1',
     to: 'eps8',
     color: '#1b1e24',
     thickness: 0.38,
@@ -148,10 +171,11 @@ export const CABLES: CableDef[] = [
     wrongHint: "Attention : ce connecteur ressemble au PCIe de la carte graphique, mais il va tout en haut, près du processeur.",
     order: 2,
     what: "Le processeur consomme trop pour se contenter du 24 broches : il reçoit son propre câble 12 V.",
-    fromHint: "Repars du bloc d'alimentation : clique sur le faisceau.",
+    fromHint: "Repars du bloc d'alimentation : clique sur une prise « CPU ».",
     toHint: "Clique sur le connecteur 8 broches, tout en haut de la carte mère, près du ventirad.",
     view: 'cablage',
     waypoints: [
+      outOf('cpu1'),
       DIVE,
       EDGE_LOW,
       EDGE_MID,
@@ -166,8 +190,9 @@ export const CABLES: CableDef[] = [
     id: 'pcie8',
     name: 'Câble PCIe 8 broches',
     carries: "Il alimente la carte graphique, qui consomme trop pour le seul slot PCIe.",
-    fromLabel: "Bloc d'alimentation",
-    from: PSU_OUT,
+    fromLabel: 'Alimentation : prise PCIe',
+    from: fromPsu('pcie1'),
+    psuPlug: 'pcie1',
     to: 'pcie8',
     color: '#22262e',
     thickness: 0.4,
@@ -175,17 +200,19 @@ export const CABLES: CableDef[] = [
     wrongHint: 'Le câble PCIe se branche sur la carte graphique elle-même, pas sur la carte mère.',
     order: 3,
     what: "Même histoire pour la carte graphique : le slot PCIe ne suffit pas à l'alimenter.",
-    fromHint: "Clique une nouvelle fois sur le faisceau du bloc d'alimentation.",
-    toHint: "Clique sur la prise située SUR LE DESSUS de la carte graphique.",
+    fromHint: "Clique sur une prise « PCIe » du bloc d'alimentation.",
+    toHint: "Clique sur la prise 8 broches, sur la tranche de la carte graphique tournée vers toi.",
     view: 'cablage',
-    waypoints: [DIVE, EDGE_LOW, [EDGE_X, 24.5, FRONT_Z], [-3.5, 25.6, -3.5], [1.6, 25, -1.6]],
+    // au-dessus de la carte, puis on redescend par sa tranche jusqu'à la prise
+    waypoints: [outOf('pcie1'), DIVE, EDGE_LOW, [EDGE_X, 24.5, FRONT_Z], [-3.5, 25.6, -3.5], [1.6, 25, -1.6], [6.2, 25, -1.0], [8.6, 23.2, -0.6]],
   },
   {
     id: 'sataPower',
     name: 'Alimentation SATA',
     carries: 'Elle alimente le disque dur.',
-    fromLabel: "Bloc d'alimentation",
-    from: PSU_OUT,
+    fromLabel: 'Alimentation : prise SATA',
+    from: fromPsu('sata1'),
+    psuPlug: 'sata1',
     to: 'sataPower',
     color: '#1b1e24',
     thickness: 0.3,
@@ -193,10 +220,10 @@ export const CABLES: CableDef[] = [
     wrongHint: "L'alimentation SATA est plus LARGE que la prise de données. Regarde bien la taille des deux prises du disque.",
     order: 4,
     what: "Au tour du disque dur : il lui faut d'abord du courant.",
-    fromHint: "Clique sur le faisceau du bloc d'alimentation.",
+    fromHint: "Clique sur une prise « SATA / PÉRIPHÉRIQUES » du bloc d'alimentation.",
     toHint: "Clique sur la plus LARGE des deux prises du disque dur : c'est l'alimentation SATA.",
     view: 'cablage',
-    waypoints: [[EDGE_X, 2.6, -3], [-2.5, 2.1, -4.0]],
+    waypoints: [outOf('sata1'), [EDGE_X, 2.6, -3], [-2.5, 2.1, -4.0]],
   },
   {
     id: 'sataData',
