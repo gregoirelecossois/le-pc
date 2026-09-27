@@ -125,26 +125,24 @@ const FLOOR_RECTS: Rect[] = [
   [VENT_X0, VENT_X1, VENT_Z1, HD],
 ]
 
-/** Tôle perforée de trous hexagonaux, qui ferme l'ouverture. */
-function psuVentGeometry() {
-  const w = VENT_X1 - VENT_X0
-  const d = VENT_Z1 - VENT_Z0
+/**
+ * Plaque percée d'alvéoles hexagonales, de vrais trous : on voit au travers.
+ * Posée dans le plan XY, centrée, épaisseur vers +z.
+ */
+function hexMeshGeometry(w: number, h: number, depth: number, r: number, dx: number, margin: number) {
   const shape = new THREE.Shape()
-  shape.moveTo(-w / 2, -d / 2)
-  shape.lineTo(w / 2, -d / 2)
-  shape.lineTo(w / 2, d / 2)
-  shape.lineTo(-w / 2, d / 2)
+  shape.moveTo(-w / 2, -h / 2)
+  shape.lineTo(w / 2, -h / 2)
+  shape.lineTo(w / 2, h / 2)
+  shape.lineTo(-w / 2, h / 2)
   shape.closePath()
-  // de grandes alvéoles : on doit voir le ventilateur au travers
-  const r = 0.68
-  const dx = 1.36
-  const dy = 1.18
+  const dy = (dx * Math.sqrt(3)) / 2
   for (let row = 0; ; row++) {
-    const y = -d / 2 + 0.7 + row * dy
-    if (y > d / 2 - 0.7) break
+    const y = -h / 2 + margin + row * dy
+    if (y > h / 2 - margin) break
     for (let col = 0; ; col++) {
-      const x = -w / 2 + 0.7 + col * dx + (row % 2) * (dx / 2)
-      if (x > w / 2 - 0.7) break
+      const x = -w / 2 + margin + col * dx + (row % 2) * (dx / 2)
+      if (x > w / 2 - margin) break
       const hole = new THREE.Path()
       for (let k = 0; k < 6; k++) {
         const a = (k * Math.PI) / 3 + Math.PI / 6
@@ -155,10 +153,32 @@ function psuVentGeometry() {
       shape.holes.push(hole)
     }
   }
-  const g = new THREE.ExtrudeGeometry(shape, { depth: CASE.wall, bevelEnabled: false, steps: 1 })
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, steps: 1 })
+}
+
+/** Tôle perforée qui ferme l'ouverture du plancher. */
+function psuVentGeometry() {
+  // de grandes alvéoles : on doit voir le ventilateur au travers
+  const g = hexMeshGeometry(VENT_X1 - VENT_X0, VENT_Z1 - VENT_Z0, CASE.wall, 0.68, 1.36, 0.7)
   // à plat, épaisseur vers le haut
   g.rotateX(-Math.PI / 2)
   return g
+}
+
+/* Grille de façade : une vraie ouverture, fermée par une tôle perforée,
+   derrière laquelle on voit tourner le ventilateur avant. */
+/** Centrée sur le ventilateur (x -5,8 -> 6,2, y 22 -> 34), même marge tout autour. */
+const GRILLE_X0 = -6.9
+const GRILLE_X1 = 7.3
+const GRILLE_Y0 = 20.9
+const GRILLE_Y1 = 35.1
+/** Face avant de la façade (elle fait 1,8 d'épaisseur). */
+const FRONT_Z = -HD - 1.8
+/** La tôle est un peu en retrait : le cadre de la façade lui fait un rebord. */
+const GRILLE_Z = FRONT_Z + 0.35
+
+function frontGrilleGeometry() {
+  return hexMeshGeometry(GRILLE_X1 - GRILLE_X0, GRILLE_Y1 - GRILLE_Y0, 0.15, 0.3, 0.64, 0.55)
 }
 
 /* Support du SSD 2,5" : dessus du berceau, et son étendue en z. */
@@ -233,6 +253,7 @@ export function CaseShell({
 
   const covers = slotCovers ?? [true, true, true, true, true, true, true]
   const psuVent = useMemo(psuVentGeometry, [])
+  const frontGrille = useMemo(frontGrilleGeometry, [])
   // Rendu allégé : verre sans transmission (voir M.glassLite)
   const liteGlass = useGame((s) => isLite(s.quality))
 
@@ -316,23 +337,32 @@ export function CaseShell({
       {!hideFront && (
         <group>
           {/* Façade percée : la baie 5,25" doit laisser sortir le tiroir du
-              lecteur de disques. On assemble donc quatre morceaux autour de
-              l'ouverture, plutôt qu'une plaque pleine. */}
+              lecteur de disques, et la grille doit laisser entrer l'air (et
+              voir le ventilateur). On assemble donc la façade en morceaux
+              autour des deux ouvertures, plutôt qu'une plaque pleine. */}
           <PlateXY
             rects={[
-              [-FW, FW, 0, BAY_Y0],
+              [-FW, FW, 0, GRILLE_Y0],
+              [-FW, GRILLE_X0, GRILLE_Y0, GRILLE_Y1],
+              [GRILLE_X1, FW, GRILLE_Y0, GRILLE_Y1],
+              [-FW, FW, GRILLE_Y1, BAY_Y0],
               [-FW, FW, BAY_Y1, H],
               [-FW, BAY_X0, BAY_Y0, BAY_Y1],
               [BAY_X1, FW, BAY_Y0, BAY_Y1],
             ]}
-            z={-HD - 0.9}
+            z={FRONT_Z + 0.9}
             thickness={1.8}
             material={plastic}
           />
-          {/* Grille de façade (l'air frais entre par là) */}
-          <group position={[0, H / 2 - 3, -HD - 1.85]}>
-            <Grille width={17} height={25} step={0.95} hole={0.6} depth={0.14} color="#0c0e11" />
-          </group>
+          {/* Grille de façade, percée pour de bon : l'air frais entre par là */}
+          <mesh
+            geometry={frontGrille}
+            position={[(GRILLE_X0 + GRILLE_X1) / 2, (GRILLE_Y0 + GRILLE_Y1) / 2, GRILLE_Z]}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial color="#16191e" roughness={0.6} metalness={0.55} />
+          </mesh>
           {/* Bandeau de connectique, sous la baie 5,25" :
               bouton d'alimentation, 2 USB et un jack casque. */}
           <group position={[HW - 3.4, IO_FRONT_Y, -HD - 1.9]}>
