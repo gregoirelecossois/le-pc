@@ -22,7 +22,6 @@ import { Garde, Toile, Tourne, WEBGL } from './scene3d'
 import {
   PRENOM_OK,
   SUIVI_ACTIF,
-  chargerClasses,
   etapesFaites,
   etoiles,
   prenomPropre,
@@ -63,22 +62,18 @@ function Envoi() {
 /*  1. Qui es-tu ?                                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Les quatre classes du collège, toujours les mêmes : l'élève touche la sienne.
+ * Le serveur n'accepte qu'une classe qui existe dans l'établissement — ces quatre noms
+ * sont ceux que l'Atelier crée d'office (« 6e », « 5e », « 4e », « 3e »).
+ */
+const CLASSES = ['6e', '5e', '4e', '3e']
+
 function Accueil() {
   const inscrire = useSuivi((s) => s.inscrire)
   const [prenom, setPrenom] = useState('')
   const [classe, setClasse] = useState('')
-  /** null = on attend le serveur ; [] = pas de liste, l'élève tape sa classe */
-  const [classes, setClasses] = useState<string[] | null>(SUIVI_ACTIF ? null : [])
   const [essaye, setEssaye] = useState(false)
-
-  useEffect(() => {
-    if (!SUIVI_ACTIF) return
-    let vivant = true
-    void chargerClasses().then((c) => vivant && setClasses(c ?? []))
-    return () => {
-      vivant = false
-    }
-  }, [])
 
   const propre = prenomPropre(prenom)
   const prenomOk = PRENOM_OK.test(propre)
@@ -126,38 +121,23 @@ function Accueil() {
         <span className="label" id="l-classe">
           Ta classe
         </span>
-        {classes === null ? (
-          <p className="attente">Chargement des classes…</p>
-        ) : classes.length > 0 ? (
-          <div className="classes" role="radiogroup" aria-labelledby="l-classe">
-            {classes.map((c) => (
-              <button
-                key={c}
-                type="button"
-                role="radio"
-                aria-checked={classe === c}
-                className={`classe ${classe === c ? 'on' : ''}`}
-                onClick={() => {
-                  sfx.click()
-                  setClasse(c)
-                }}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <input
-            id="classe"
-            name="classe"
-            value={classe}
-            onChange={(e) => setClasse(e.target.value)}
-            maxLength={12}
-            autoCorrect="off"
-            placeholder="Par exemple : 5e"
-            aria-labelledby="l-classe"
-          />
-        )}
+        <div className="classes" role="radiogroup" aria-labelledby="l-classe">
+          {CLASSES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={classe === c}
+              className={`classe ${classe === c ? 'on' : ''}`}
+              onClick={() => {
+                sfx.click()
+                setClasse(c)
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
         {essaye && !classeOk && <p className="erreur">Choisis ta classe.</p>}
 
         <button type="submit" className={`btn primaire geant ${pret ? '' : 'pale'}`}>

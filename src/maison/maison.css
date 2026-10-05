@@ -308,11 +308,11 @@ input:focus-visible {
 }
 .classes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 .classe {
-  min-height: 52px;
+  min-height: 60px;
   border-radius: 14px;
   border: 2px solid var(--trait-fort);
   background: var(--fond);
@@ -329,9 +329,6 @@ input:focus-visible {
   color: var(--ko);
   font-weight: 700;
   font-size: 0.95rem;
-}
-.attente {
-  color: var(--doux);
 }
 .mention {
   color: var(--doux);

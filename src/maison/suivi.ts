@@ -174,19 +174,6 @@ function persister() {
   ecrire({ id: s.id, prenom: s.prenom, classe: s.classe, scores: s.scores, aEnvoyer: s.aEnvoyer })
 }
 
-/** La liste des classes de l'établissement, pour que l'élève touche la sienne. */
-export async function chargerClasses(): Promise<string[] | null> {
-  if (!SUIVI_ACTIF) return null
-  try {
-    const r = await fetch(`${API}/api/devoir/classes?c=${encodeURIComponent(CODE)}`, { cache: 'no-store' })
-    if (!r.ok) return null
-    const j = (await r.json()) as { classes?: unknown }
-    return Array.isArray(j.classes) ? j.classes.map(String) : null
-  } catch {
-    return null
-  }
-}
-
 /* ---- L'état ---- */
 
 const depart = lire()
