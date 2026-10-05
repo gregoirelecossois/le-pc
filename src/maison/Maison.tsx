@@ -20,6 +20,8 @@ import { JeuDeMission } from './jeux'
 import { Photo } from './photo'
 import { Garde, Toile, Tourne, WEBGL } from './scene3d'
 import {
+  CODE,
+  ENTREE,
   PRENOM_OK,
   SUIVI_ACTIF,
   etapesFaites,
@@ -147,7 +149,7 @@ function Accueil() {
 
       <p className="mention">
         {SUIVI_ACTIF
-          ? 'Ton professeur verra ton prénom, ta classe et ton score. Rien d’autre.'
+          ? 'Ton professeur verra ton prénom, ta classe et ton score, et pourra les relier à ton compte de l’Atelier. Rien d’autre.'
           : 'Mode entraînement : rien n’est envoyé à ton professeur.'}
       </p>
     </main>
@@ -244,7 +246,13 @@ function CarteMissions({ onMission }: { onMission: (i: number) => void }) {
       )}
 
       <footer className="pied">
-        {demande ? (
+        {ENTREE?.entree ? (
+          // Venu par la page d'entrée : c'est là qu'on change d'élève, et qu'on retrouve
+          // ses autres révisions.
+          <a className="lien-discret" href={ENTREE.entree + (CODE ? `?c=${encodeURIComponent(CODE)}` : '')}>
+            ← {prenom} · {classe} — Toutes mes révisions
+          </a>
+        ) : demande ? (
           <div className="confirme">
             <p>
               Recommencer avec un autre prénom ? Le score de {prenom} reste chez le professeur.

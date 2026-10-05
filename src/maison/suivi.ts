@@ -17,12 +17,25 @@
  *
  * SANS CODE DANS LE LIEN (`?c=…`), la page fonctionne en « entraînement » : rien ne
  * part, et c'est dit à l'élève. C'est aussi ce qui permet de l'essayer sans serveur.
+ *
+ * LA PAGE D'ENTRÉE. Les élèves arrivent normalement par atelier-informatique/maison.html,
+ * la même page toute l'année, où ils ont donné leur prénom et leur classe une fois. Elle
+ * vit sur le même domaine (gregoirelecossois.github.io) et range l'élève dans
+ * `maison_eleve_v1` : cette page le relit, et ne redemande rien. En retour, elle écrit
+ * son avancée dans `maison_avancees_v1`, pour que la tuile de la page d'entrée la montre.
+ * Ouverte directement, sans passer par l'entrée, elle garde son propre accueil.
  */
 
 import { create } from 'zustand'
 import { DEVOIR, MISSIONS, SCORE_MAX, pointsDuJeu } from './contenu'
 
+/** La même règle que le serveur : des lettres, et ce qui les relie. */
+export const PRENOM_OK = /^\p{L}[\p{L} '’-]{0,23}$/u
+
 const CLE = 'pc_maison_v1'
+/** Partagées avec la page d'entrée (atelier-informatique/maison.html). */
+const CLE_ELEVE = 'maison_eleve_v1'
+const CLE_AVANCEES = 'maison_avancees_v1'
 
 /** Ce que le téléphone retient. */
 interface Sauvegarde {
@@ -46,13 +59,56 @@ interface Suivi extends Sauvegarde {
   renvoyer: () => void
 }
 
+/* ---- La page d'entrée ---- */
+
+/** Ce que la page d'entrée a rangé sur ce téléphone. */
+interface Entree {
+  /** Tiré au hasard une fois par téléphone, le même pour tous les travaux */
+  appareil: string
+  prenom: string
+  classe: string
+  code: string
+  /** L'adresse de la page d'entrée, pour y revenir */
+  entree: string
+}
+
+function memeOrigine(adresse: string): boolean {
+  try {
+    return new URL(adresse).origin === location.origin
+  } catch {
+    return false
+  }
+}
+
+function lireEntree(): Entree | null {
+  try {
+    const e = JSON.parse(localStorage.getItem(CLE_ELEVE) ?? 'null') as Partial<Entree> | null
+    if (!e || typeof e.prenom !== 'string' || !PRENOM_OK.test(e.prenom) || typeof e.classe !== 'string' || !e.classe) {
+      return null
+    }
+    return {
+      appareil: /^[A-Za-z0-9-]{16,64}$/.test(String(e.appareil ?? '')) ? String(e.appareil) : '',
+      prenom: e.prenom,
+      classe: e.classe,
+      code: String(e.code ?? ''),
+      // Seulement une page du même site : c'est un lien qu'on affiche.
+      entree: memeOrigine(String(e.entree ?? '')) ? String(e.entree) : '',
+    }
+  } catch {
+    return null
+  }
+}
+
 /* ---- Le lien ---- */
 
 const config = (window as unknown as { ATELIER_CONFIG?: { api?: string } }).ATELIER_CONFIG
 /** Adresse du serveur de l'Atelier ('' = aucun). */
 export const API = String(config?.api ?? '').replace(/\/+$/, '')
-/** Code de l'établissement, porté par le lien que le professeur a distribué. */
-export const CODE = (new URLSearchParams(location.search).get('c') ?? '').trim().toLowerCase()
+/** L'élève donné par la page d'entrée, s'il y est passé. */
+export const ENTREE = lireEntree()
+/** Code de l'établissement, porté par le lien que le professeur a distribué — ou, à
+ *  défaut, gardé par la page d'entrée. */
+export const CODE = ((new URLSearchParams(location.search).get('c') ?? '').trim() || ENTREE?.code || '').toLowerCase()
 /** Le professeur verra-t-il ce travail ? */
 export const SUIVI_ACTIF = !!API && /^[a-z0-9]{6,16}$/.test(CODE)
 
@@ -97,8 +153,6 @@ export function prenomPropre(brut: string): string {
     .replace(/(^|[ '’-])(\p{L})/gu, (_, sep: string, l: string) => sep + l.toLocaleUpperCase('fr'))
 }
 
-/** La même règle que le serveur : des lettres, et ce qui les relie. */
-export const PRENOM_OK = /^\p{L}[\p{L} '’-]{0,23}$/u
 
 /* ---- Les nombres ---- */
 
@@ -139,6 +193,7 @@ async function envoyer() {
       body: JSON.stringify({
         c: CODE,
         id: s.id,
+        appareil: ENTREE?.appareil || undefined,
         devoir: DEVOIR,
         prenom: s.prenom,
         classe: s.classe,
@@ -172,11 +227,34 @@ function persister() {
   const s = useSuivi.getState()
   if (!s.inscrit) return
   ecrire({ id: s.id, prenom: s.prenom, classe: s.classe, scores: s.scores, aEnvoyer: s.aEnvoyer })
+  if (ENTREE) {
+    // Pour la tuile de la page d'entrée : où j'en suis, en quatre nombres.
+    try {
+      const a = (JSON.parse(localStorage.getItem(CLE_AVANCEES) ?? 'null') ?? {}) as Record<string, unknown>
+      a[DEVOIR] = { etape: etapesFaites(s.scores), etapes: MISSIONS.length, score: scoreTotal(s.scores), max: SCORE_MAX }
+      localStorage.setItem(CLE_AVANCEES, JSON.stringify(a))
+    } catch {
+      /* stockage bloqué : la tuile dira « Nouveau », sans conséquence */
+    }
+  }
 }
 
 /* ---- L'état ---- */
 
-const depart = lire()
+/** « Léa » et « LÉA » : le même élève ; « Léa » puis « Tom » : un autre. */
+const memeEleve = (a: { prenom: string; classe: string }, b: { prenom: string; classe: string }) =>
+  a.prenom.toLocaleLowerCase('fr') === b.prenom.toLocaleLowerCase('fr') && a.classe === b.classe
+
+/* Passé par la page d'entrée : c'est ELLE qui dit qui est l'élève. Si quelqu'un d'autre
+   s'y est déclaré depuis (« Ce n'est pas toi ? »), l'avancée gardée ici n'est pas la
+   sienne : il repart de zéro, et la ligne du précédent reste chez le professeur. */
+const garde = lire()
+const depart: Sauvegarde | null = ENTREE
+  ? garde && memeEleve(garde, ENTREE)
+    ? { ...garde, prenom: ENTREE.prenom }
+    : { id: nouvelId(), prenom: prenomPropre(ENTREE.prenom), classe: ENTREE.classe, scores: MISSIONS.map(() => -1), aEnvoyer: true }
+  : garde
+if (ENTREE && depart) ecrire(depart)
 
 export const useSuivi = create<Suivi>()((set, get) => ({
   id: depart?.id ?? '',
@@ -224,6 +302,9 @@ export const useSuivi = create<Suivi>()((set, get) => ({
     if (get().aEnvoyer) void envoyer()
   },
 }))
+
+// Ouvert depuis la page d'entrée : sa tuile passe de « Nouveau » à « 0 / 5 » dès maintenant.
+if (ENTREE) persister()
 
 // Un envoi resté en attente repart dès que le réseau revient, ou que l'élève rouvre la page.
 if (SUIVI_ACTIF) {
