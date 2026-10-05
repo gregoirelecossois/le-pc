@@ -59,10 +59,10 @@ phrase, une image mentale, où elle se trouve, un bouton 🔊 pour l'écouter) p
 | 5 | 🏆 Le défi final | toutes | Quiz mêlé | 8 |
 
 **L'élève n'a pas de compte** : il écrit son prénom, touche sa classe, et commence. Son
-avancée reste sur son téléphone (il reprend où il s'était arrêté) et part vers le
-tableau de bord de l'Atelier, bouton **« 📱 Travail à la maison »** : qui a ouvert le
-travail, combien de missions, quel score. Le lien à distribuer s'y trouve, avec le code
-de l'établissement :
+avancée reste sur son téléphone (il reprend où il s'était arrêté) et part vers la page
+de suivi de l'Atelier, **`travail-maison.html`** (dépôt `atelier-informatique`) : qui a
+ouvert le travail, combien de missions, quel score. Le lien à distribuer s'y trouve, avec
+le code de l'établissement :
 
 ```
 https://<compte>.github.io/<dépôt>/maison.html?c=CODE
