@@ -6,6 +6,9 @@
  * leçon, et on continue. L'élève est seul devant son téléphone : un jeu qui se ferme
  * sur une erreur sans l'expliquer n'apprend rien.
  *
+ * Dans chaque jeu, la pièce sur laquelle porte la question TOURNE (scene3d.tsx) : on
+ * reconnaît une pièce en la voyant sous tous ses angles, pas sur une seule photo.
+ *
  * Aucun de ces jeux n'utilise le glisser-déposer : sur un téléphone, glisser fait
  * défiler la page une fois sur deux. Tout se fait en touchant.
  */
@@ -14,7 +17,9 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { sfx } from '@/audio/sfx'
 import { SpeakButton, stopSpeak } from '@/ui/speak'
 import { useThumbShots } from '@/three/Thumbnails'
-import { PIECES, photoDe, type Affirmation, type Jeu, type PieceId, type Place, type Question } from './contenu'
+import { PIECES, type Affirmation, type Jeu, type PieceId, type Place, type Question } from './contenu'
+import { Photo } from './photo'
+import { Piece3D, useTroisDOk } from './scene3d'
 
 /* ------------------------------------------------------------------ */
 /*  Briques communes                                                   */
@@ -47,27 +52,14 @@ function faux() {
 }
 
 /**
- * La photo d'une pièce, prise dans le moteur 3D du jeu.
- * Tant qu'elle n'est pas prête — ou si le téléphone n'a pas de 3D — une vignette de
- * secours la remplace, pour que la page reste utilisable.
+ * L'élève voit-il les pièces ? En 3D elles tournent dans leur case ; sinon ce sont les
+ * photos, quand elles sont prêtes. Sans l'une ni l'autre, un jeu « reconnais la pièce »
+ * doit donner un indice écrit.
  */
-export function Photo({ piece, className = '' }: { piece: PieceId; className?: string }) {
-  const { shots } = useThumbShots()
-  const p = PIECES[piece]
-  const shot = shots[photoDe(piece)]
-  return shot ? (
-    <img className={`photo ${className}`} src={shot.url} alt="" draggable={false} />
-  ) : (
-    <span className={`photo secours ${className}`} style={{ ['--teinte' as string]: p.couleur }} aria-hidden>
-      {p.secours}
-    </span>
-  )
-}
-
-/** Les photos sont-elles là ? Sinon, un jeu « reconnais l'image » doit donner un indice écrit. */
 function usePhotosPretes(): boolean {
   const { ready } = useThumbShots()
-  return ready
+  const troisD = useTroisDOk()
+  return troisD || ready
 }
 
 /** Le bandeau qui suit chaque réponse. Le bouton est toujours au même endroit : sous le pouce. */
@@ -160,7 +152,7 @@ function Quiz({ questions, consigne, onFini }: PropsJeu & { questions: Question[
             />
           </div>
           <div className="vitrine">
-            <Photo piece={q.piece} />
+            <Piece3D piece={q.piece} />
           </div>
           {/* Sans photo, l'image ne dit rien : on donne le rôle, comme une devinette. */}
           {!photos && <p className="indice">Indice : ça sert à {bonne.roleCourt.charAt(0).toLowerCase() + bonne.roleCourt.slice(1)}.</p>}
@@ -194,7 +186,7 @@ function Quiz({ questions, consigne, onFini }: PropsJeu & { questions: Question[
                 disabled={repondu}
                 aria-label={PIECES[o].nom}
               >
-                <Photo piece={o} />
+                <Piece3D piece={o} />
                 {/* Le nom n'apparaît qu'après la réponse — ou tout de suite, sans photo. */}
                 {(repondu || !photos) && <span className="tuile-nom">{PIECES[o].nom}</span>}
               </button>
@@ -297,7 +289,7 @@ function Paires({ pieces, consigne, onFini }: PropsJeu & { pieces: PieceId[]; co
               }}
               disabled={ok}
             >
-              <Photo piece={id} />
+              <Piece3D piece={id} />
               <span className="tuile-nom">{PIECES[id].nom}</span>
               {ok && <span className="lien">{rang(id)}</span>}
             </button>
@@ -384,7 +376,7 @@ function VraiFaux({ affirmations, onFini }: PropsJeu & { affirmations: Affirmati
     <div className="jeu">
       <Pastilles resultats={resultats} total={affirmations.length} />
       <div className="vitrine petite">
-        <Photo piece={a.piece} />
+        <Piece3D piece={a.piece} />
       </div>
       <div className="enonce affirmation">
         <h2>« {a.texte} »</h2>
@@ -456,7 +448,8 @@ function Tri({ pieces, consigne, onFini }: PropsJeu & { pieces: PieceId[]; consi
         />
       </div>
       <div className="vitrine petite">
-        <Photo piece={p.id} />
+        {/* La pièce à ranger tourne ; les deux destinations, elles, restent des photos. */}
+        <Piece3D piece={p.id} />
       </div>
       <p className="nom-piece">{p.nom}</p>
 

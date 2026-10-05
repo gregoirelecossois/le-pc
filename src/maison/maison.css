@@ -214,14 +214,31 @@ input:focus-visible {
   font-size: 1.6rem;
 }
 
-/* La pièce qui tourne. Même fond que le canvas (three/PartSpinner). */
+/* L'unique canvas 3D, posé sur toute la page (scene3d.tsx). Il passe AU-DESSUS des
+   cases, où il dessine les pièces, et SOUS les bandeaux collés en bas de l'écran. */
+.toile {
+  z-index: 1;
+}
+/* Une case où une pièce tourne : même format et même fond qu'une photo. */
+.photo.vue3d {
+  position: relative;
+  overflow: hidden;
+}
+.vue {
+  position: absolute;
+  inset: 0;
+}
+
+/* La pièce qui tourne, en tête de leçon. Même fond clair que dans les jeux : l'élève
+   retrouve la pièce telle qu'il l'a vue, et un boîtier noir se lit mal sur fond noir. */
 .scene {
+  position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
   max-height: 34dvh;
   border-radius: var(--rayon);
   overflow: hidden;
-  background: #0c0f15;
+  background: var(--photo);
   border: 1px solid var(--trait);
 }
 .scene .photo {
@@ -241,7 +258,6 @@ input:focus-visible {
   max-height: 26dvh;
   aspect-ratio: 16 / 9;
   border: none;
-  background: transparent;
 }
 .accueil h1 {
   font-size: 2.3rem;
@@ -674,6 +690,7 @@ input:focus-visible {
 .actions {
   position: sticky;
   bottom: 0;
+  z-index: 2;
   margin-top: auto;
   display: flex;
   gap: 10px;
@@ -805,6 +822,7 @@ input:focus-visible {
 }
 .tuile .lien {
   position: absolute;
+  z-index: 2;
   top: 10px;
   left: 10px;
 }
@@ -893,6 +911,7 @@ input:focus-visible {
 .retour {
   position: sticky;
   bottom: 0;
+  z-index: 2;
   margin-top: auto;
   margin-inline: calc(var(--gouttiere) * -1);
   padding: 14px var(--gouttiere) calc(14px + env(safe-area-inset-bottom, 0px));

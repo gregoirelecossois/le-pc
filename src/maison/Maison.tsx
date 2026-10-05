@@ -4,19 +4,21 @@
  * Un seul parcours, sans menu : je dis qui je suis → la carte des cinq missions →
  * pour chaque mission, trois cartes de leçon puis un jeu → mon score.
  *
- * La 3D vient du jeu, mais elle est tenue en laisse : UNE pièce qui tourne sur la
- * carte de leçon, et des photos fixes partout ailleurs (prises une fois, au
- * chargement, par le studio de la fiche de révision). Un téléphone d'élève n'a ni la
- * carte graphique ni la batterie d'un poste de salle informatique.
+ * La 3D vient du jeu. Les pièces tournent dans les leçons comme dans les jeux, mais un
+ * SEUL moteur les dessine toutes (scene3d.tsx) : un téléphone d'élève n'a ni la carte
+ * graphique ni la batterie d'un poste de salle informatique. Les photos fixes (prises
+ * une fois, au chargement, par le studio de la fiche de révision) servent aux petites
+ * vignettes et de repli quand la 3D manque.
  */
 
-import { Component, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { sfx } from '@/audio/sfx'
 import { SpeakButton, stopSpeak } from '@/ui/speak'
-import { PartSpinner } from '@/three/PartSpinner'
 import { ThumbnailStudio } from '@/three/Thumbnails'
 import { MISSIONS, PHOTOS, PIECES, SCORE_MAX, pointsDuJeu, type Carte, type Mission } from './contenu'
-import { JeuDeMission, Photo } from './jeux'
+import { JeuDeMission } from './jeux'
+import { Photo } from './photo'
+import { Garde, Toile, Tourne, WEBGL } from './scene3d'
 import {
   PRENOM_OK,
   SUIVI_ACTIF,
@@ -28,44 +30,6 @@ import {
   useSuivi,
   type EtatEnvoi,
 } from './suivi'
-
-/* ------------------------------------------------------------------ */
-/*  La 3D, quand le téléphone la permet                                */
-/* ------------------------------------------------------------------ */
-
-/** Le téléphone sait-il afficher de la 3D ? Vérifié une fois, sans rien monter. */
-const WEBGL = (() => {
-  try {
-    const c = document.createElement('canvas')
-    return !!(c.getContext('webgl2') ?? c.getContext('webgl'))
-  } catch {
-    return false
-  }
-})()
-
-/** Une panne de la 3D ne doit jamais emporter la page : on retombe sur les vignettes. */
-class Garde extends Component<{ children: ReactNode; secours?: ReactNode }, { casse: boolean }> {
-  state = { casse: false }
-  static getDerivedStateFromError() {
-    return { casse: true }
-  }
-  render() {
-    return this.state.casse ? (this.props.secours ?? null) : this.props.children
-  }
-}
-
-/** La pièce qui tourne, en tête d'une carte de leçon. */
-function Tourne({ piece }: { piece: keyof typeof PIECES }) {
-  const secours = <Photo piece={piece} className="grande" />
-  if (!WEBGL) return <div className="scene">{secours}</div>
-  return (
-    <div className="scene">
-      <Garde secours={secours}>
-        <PartSpinner id={PIECES[piece].modele} spin={0.14} />
-      </Garde>
-    </div>
-  )
-}
 
 /* ------------------------------------------------------------------ */
 /*  Petites briques                                                    */
@@ -522,6 +486,9 @@ export default function Maison() {
           <ThumbnailStudio queue={PHOTOS} />
         </Garde>
       )}
+
+      {/* L'unique moteur 3D : toutes les pièces qui tournent sont des fenêtres dedans. */}
+      <Toile />
 
       {!inscrit ? (
         <Accueil />
