@@ -58,17 +58,26 @@ phrase, une image mentale, où elle se trouve, un bouton 🔊 pour l'écouter) p
 | 4 | 🧩 Chacun à sa place | carte graphique, ventilateur, pile | Tri : carte mère ou boîtier | 6 |
 | 5 | 🏆 Le défi final | toutes | Quiz mêlé | 8 |
 
-**L'élève n'a pas de compte** : il écrit son prénom, touche sa classe, et commence. Son
-avancée reste sur son téléphone (il reprend où il s'était arrêté) et part vers la page
-de suivi de l'Atelier, **`travail-maison.html`** (dépôt `atelier-informatique`) : qui a
-ouvert le travail, combien de missions, quel score. Le lien à distribuer s'y trouve, avec
-le code de l'établissement :
+**L'élève n'a pas de compte.** Il arrive normalement par la **page d'entrée de l'Atelier**,
+`atelier-informatique/maison.html?c=CODE` — le même lien toute l'année, affiché par la
+page de suivi `travail-maison.html` — où il a donné son prénom et sa classe une fois, et
+où « Le PC à la maison » est une tuile parmi les révisions de sa classe. Les deux pages
+vivent sur le même domaine (`gregoirelecossois.github.io`) et se parlent par le
+navigateur du téléphone :
 
-```
-https://<compte>.github.io/<dépôt>/maison.html?c=CODE
-```
+| Clé `localStorage` | Écrite par | Contenu |
+|---|---|---|
+| `maison_eleve_v1` | la page d'entrée | `{ appareil, prenom, classe, code, entree }` — cette page ne redemande rien |
+| `maison_avancees_v1` | cette page | `{ "pc-1": { etape, etapes, score, max } }` — pour la tuile |
 
-Sans code, la page fonctionne en **entraînement** : tout marche, rien n'est envoyé.
+Si quelqu'un d'autre s'est déclaré sur la page d'entrée depuis (« Ce n'est pas toi ? »),
+l'avancée gardée ici repart de zéro. L'identifiant `appareil` part avec chaque envoi : il
+permet au serveur de relier tout seul ce devoir à l'élève que l'enseignant a déjà reconnu
+sur un autre (api/README.md § 4 bis).
+
+Ouverte directement (`maison.html?c=CODE`), la page garde son propre accueil prénom +
+classe. Sans code, ni ici ni dans la page d'entrée, elle fonctionne en **entraînement** :
+tout marche, rien n'est envoyé.
 
 Le contenu est dans `src/maison/contenu.ts` (textes, questions), le suivi dans
 `src/maison/suivi.ts`. Les modèles 3D et les photos des pièces sont ceux du jeu
