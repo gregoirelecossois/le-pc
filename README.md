@@ -43,6 +43,41 @@ C'est le document à emmener devant la vraie machine.
 
 ---
 
+## Le PC à la maison — pour téléphone, sans compte
+
+`maison.html` est une seconde page, publiée à côté du jeu : **cinq missions de révision
+à faire seul, sur un téléphone, en vingt minutes au plus**, après la première séance en
+classe. Chaque mission enchaîne une leçon de trois cartes (la pièce tourne en 3D, une
+phrase, une image mentale, où elle se trouve, un bouton 🔊 pour l'écouter) puis un jeu :
+
+| # | Mission | Pièces | Jeu | Points |
+|---|---------|--------|-----|--------|
+| 1 | 🧱 Les trois grands | boîtier, carte mère, alimentation | Qui est-ce ? (image → nom) | 4 |
+| 2 | 🧠 Le cerveau du PC | processeur, ventirad, mémoire vive | Les paires (pièce ↔ travail) | 4 |
+| 3 | 💾 Garder les fichiers | SSD, disque dur, lecteur CD / DVD | Vrai ou faux ? | 5 |
+| 4 | 🧩 Chacun à sa place | carte graphique, ventilateur, pile | Tri : carte mère ou boîtier | 6 |
+| 5 | 🏆 Le défi final | toutes | Quiz mêlé | 8 |
+
+**L'élève n'a pas de compte** : il écrit son prénom, touche sa classe, et commence. Son
+avancée reste sur son téléphone (il reprend où il s'était arrêté) et part vers la page
+de suivi de l'Atelier, **`travail-maison.html`** (dépôt `atelier-informatique`) : qui a
+ouvert le travail, combien de missions, quel score. Le lien à distribuer s'y trouve, avec
+le code de l'établissement :
+
+```
+https://<compte>.github.io/<dépôt>/maison.html?c=CODE
+```
+
+Sans code, la page fonctionne en **entraînement** : tout marche, rien n'est envoyé.
+
+Le contenu est dans `src/maison/contenu.ts` (textes, questions), le suivi dans
+`src/maison/suivi.ts`. Les modèles 3D et les photos des pièces sont ceux du jeu
+(`three/PartSpinner`, `three/Thumbnails`) ; un téléphone sans 3D reçoit des vignettes de
+secours et des indices écrits. Côté serveur : `api/README.md` § 4 bis du dépôt
+`atelier-informatique` — **l'API doit y être redéployée** pour que le suivi fonctionne.
+
+---
+
 ## Le matériel modélisé
 
 Un PC de bureau **ATX** générique, aux cotes réelles :

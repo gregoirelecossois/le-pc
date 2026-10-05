@@ -87,6 +87,18 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: offline ? 'dist-offline' : 'dist',
       emptyOutDir: true,
+      // Deux pages en ligne : le jeu, et le travail à la maison pour téléphone
+      // (maison.html). Hors-ligne il n'y en a qu'UNE — le fichier unique à
+      // double-cliquer — et le travail à la maison n'a de toute façon pas de sens
+      // sans réseau : son intérêt est que le professeur voie qui l'a fait.
+      rollupOptions: offline
+        ? undefined
+        : {
+            input: {
+              index: path.resolve(import.meta.dirname, 'index.html'),
+              maison: path.resolve(import.meta.dirname, 'maison.html'),
+            },
+          },
       target: 'es2022',
       chunkSizeWarningLimit: 2000,
       assetsInlineLimit: offline ? 100_000_000 : 4096,
