@@ -18,8 +18,9 @@
  * SANS CODE DANS LE LIEN (`?c=…`), la page fonctionne en « entraînement » : rien ne
  * part, et c'est dit à l'élève. C'est aussi ce qui permet de l'essayer sans serveur.
  *
- * LA PAGE D'ENTRÉE. Les élèves arrivent normalement par atelier-informatique/maison.html,
- * la même page toute l'année, où ils ont donné leur prénom et leur classe une fois. Elle
+ * LA PAGE D'ENTRÉE. Les élèves arrivent normalement par travaux-maison/ (dépôt du même
+ * nom), la même page toute l'année, où ils ont donné leur prénom et leur classe une fois,
+ * et peut-être dit « C'est moi » au compte de l'Atelier qu'elle leur proposait. Elle
  * vit sur le même domaine (gregoirelecossois.github.io) et range l'élève dans
  * `maison_eleve_v1` : cette page le relit, et ne redemande rien. En retour, elle écrit
  * son avancée dans `maison_avancees_v1`, pour que la tuile de la page d'entrée la montre.
@@ -33,7 +34,7 @@ import { DEVOIR, MISSIONS, SCORE_MAX, pointsDuJeu } from './contenu'
 export const PRENOM_OK = /^\p{L}[\p{L} '’-]{0,23}$/u
 
 const CLE = 'pc_maison_v1'
-/** Partagées avec la page d'entrée (atelier-informatique/maison.html). */
+/** Partagées avec la page d'entrée (dépôt travaux-maison, index.html). */
 const CLE_ELEVE = 'maison_eleve_v1'
 const CLE_AVANCEES = 'maison_avancees_v1'
 
@@ -70,6 +71,8 @@ interface Entree {
   code: string
   /** L'adresse de la page d'entrée, pour y revenir */
   entree: string
+  /** Le compte de l'Atelier que l'élève a dit être le sien (« C'est moi »), sinon null */
+  compte: number | null
 }
 
 function memeOrigine(adresse: string): boolean {
@@ -93,6 +96,7 @@ function lireEntree(): Entree | null {
       code: String(e.code ?? ''),
       // Seulement une page du même site : c'est un lien qu'on affiche.
       entree: memeOrigine(String(e.entree ?? '')) ? String(e.entree) : '',
+      compte: Number.isInteger(e.compte) && Number(e.compte) > 0 ? Number(e.compte) : null,
     }
   } catch {
     return null
@@ -194,6 +198,9 @@ async function envoyer() {
         c: CODE,
         id: s.id,
         appareil: ENTREE?.appareil || undefined,
+        // Seulement si l'élève de cette page est bien celui de la page d'entrée : un élève
+        // inscrit ici, par l'accueil de cette page, n'a dit « C'est moi » à personne.
+        compte: (ENTREE && memeEleve(s, ENTREE) && ENTREE.compte) || undefined,
         devoir: DEVOIR,
         prenom: s.prenom,
         classe: s.classe,
