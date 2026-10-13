@@ -3,9 +3,12 @@
  *
  * On part d'une machine complète, allumée et reliée à ses périphériques.
  * L'ordre est imposé :
- *   1. ÉTEINDRE le PC          (bouton à gauche du curseur, à enfoncement unique)
- *   2. DÉBRANCHER les câbles des périphériques (bouton à droite)
+ *   1. ÉTEINDRE le PC          (bouton en haut, à enfoncement unique)
+ *   2. DÉBRANCHER chaque fiche, une par une, en cliquant dessus à l'arrière
  *   3. RETIRER les composants  (en commençant par ce qui est posé par-dessus)
+ *
+ * Pas de vue éclatée ici : on démonte une machine réelle, pièce par pièce, et
+ * le geste à apprendre est justement de retirer ce qui est posé par-dessus.
  *
  * Retirer un composant hors de cet ordre fait recommencer l'atelier, avec
  * l'explication. Un composant retiré n'ouvre plus de fenêtre : un texte
@@ -17,19 +20,21 @@ import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { Html } from '@react-three/drei'
 import { COMPONENTS, INSTALLABLE_IDS, placedShortName, type ComponentId } from '@/data/components'
+import { PERIPHERAL_BY_ID } from '@/data/peripherals'
 import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
 import { asPart } from '@/three/models'
-import { boundsCenter } from '@/three/layout'
-import { ExerciseBar, ExerciseEnd, ExerciseIntro, ExplodeSlider, useReady } from './Frame'
-import { ConnectedPeripherals, DEMO_CONNECTED } from './periConnected'
+import { boundsCenter, type CameraViewId, type Vec3 } from '@/three/layout'
+import { ExerciseBar, ExerciseEnd, ExerciseIntro, useReady } from './Frame'
+import { ConnectedPeripherals, DEMO_CONNECTED, portAnchor } from './periConnected'
 import { useExercise } from './useExercise'
 import { sfx } from '@/audio/sfx'
 
 interface Float {
   key: number
-  id: Exclude<ComponentId, 'case'>
-  name: string
+  /** Où l'étiquette apparaît (au-dessus de la pièce, ou de la fiche) */
+  pos: Vec3
+  text: string
 }
 
 interface DisState {
@@ -37,8 +42,10 @@ interface DisState {
   finished: boolean
   /** Le PC est-il encore sous tension ? (bouton « Éteindre ») */
   powered: boolean
-  /** Les câbles des périphériques ont-ils été retirés ? (bouton « Débrancher ») */
+  /** Toutes les fiches des périphériques ont-elles été retirées ? */
   periUnplugged: boolean
+  /** Fiche mise en évidence par l'indice */
+  plugFlash: string | null
   /** Étiquettes vertes « … retiré » qui montent depuis les pièces */
   floats: Float[]
 }
@@ -47,6 +54,7 @@ const useDis = create<DisState>()(() => ({
   finished: false,
   powered: true,
   periUnplugged: false,
+  plugFlash: null,
   floats: [],
 }))
 
@@ -54,7 +62,7 @@ let floatSeq = 1
 
 /** Remet l'atelier au tout début (machine remontée, boutons non enfoncés). */
 function restartDisassembly() {
-  useDis.setState({ flash: {}, finished: false, powered: true, periUnplugged: false, floats: [] })
+  useDis.setState({ flash: {}, finished: false, powered: true, periUnplugged: false, plugFlash: null, floats: [] })
   useExercise.getState().begin('demontage', INSTALLABLE_IDS.length)
   useBuild.getState().resetBuild(ALL_INSTALLED)
   useBuild.getState().set({
@@ -65,6 +73,40 @@ function restartDisassembly() {
     plugged: { ...DEMO_CONNECTED },
   })
   useExercise.getState().play()
+}
+
+/** « Le clavier » → « le clavier », pour l'insérer dans une phrase. */
+function minuscule(nom: string) {
+  return nom.charAt(0).toLowerCase() + nom.slice(1)
+}
+
+/**
+ * Débranche une fiche, cliquée dans la 3D.
+ * Le PC doit d'abord être éteint : avant, la fiche ne bouge pas et on explique
+ * pourquoi — sans compter d'erreur, c'est le bouton « Éteindre » qu'il fallait voir.
+ */
+export function unplugPeripheral(periId: string) {
+  const b = useBuild.getState()
+  const port = b.plugged[periId]
+  if (!port) return
+  const nom = PERIPHERAL_BY_ID[periId]?.name ?? 'Ce périphérique'
+  if (useDis.getState().powered) {
+    useExercise
+      .getState()
+      .info(
+        "Éteins d'abord le PC",
+        `On ne débranche pas ${minuscule(nom)} d'une machine allumée. Clique sur « Éteindre le PC », en haut de l'écran.`,
+      )
+    return
+  }
+  sfx.pick()
+  const a = portAnchor(port)
+  b.unplug(periId)
+  useDis.setState((s) => ({
+    plugFlash: s.plugFlash === periId ? null : s.plugFlash,
+    floats: [...s.floats, { key: floatSeq++, pos: [a[0] + 4, a[1] + 3, a[2] + 4], text: `Fiche retirée : ${minuscule(nom)}` }],
+  }))
+  if (Object.keys(useBuild.getState().plugged).length === 0) useDis.setState({ periUnplugged: true })
 }
 
 /** Ce qui empêche de retirer `id` : les pièces posées dessus, encore présentes. */
@@ -87,7 +129,7 @@ export function removePart(id: ComponentId) {
   if (dis.powered || !dis.periUnplugged) {
     const why = dis.powered
       ? "Il faut d'abord ÉTEINDRE le PC, puis débrancher les câbles des périphériques."
-      : 'Il faut d\'abord DÉBRANCHER tous les câbles des périphériques (bouton à droite du curseur).'
+      : "Il faut d'abord DÉBRANCHER chaque périphérique : clique sur chaque fiche, à l'arrière de l'unité centrale."
     ex.bad(
       'Pas encore — on recommence',
       `${why} On ne démonte jamais une machine encore sous tension ou reliée à ses périphériques : risque d'électrocution, de court-circuit, et on peut arracher une prise. On reprend depuis le début.`,
@@ -111,8 +153,9 @@ export function removePart(id: ComponentId) {
 
   // --- Retrait : pas de fenêtre, un texte vert monte depuis la pièce ---
   sfx.pick()
+  const c = boundsCenter(id)
   useDis.setState((s) => ({
-    floats: [...s.floats, { key: floatSeq++, id, name: placedShortName(id) }],
+    floats: [...s.floats, { key: floatSeq++, pos: [c[0], c[1] + 8, c[2]], text: `${placedShortName(id)} retiré` }],
   }))
   b.uninstall(id)
   if (id === 'psu' || id === 'motherboard') b.set({ powered: false, running: false })
@@ -124,15 +167,13 @@ export function removePart(id: ComponentId) {
 /* ---------------- Étiquette « … retiré » qui monte ---------------- */
 
 function RemovedFloat({ float, onDone }: { float: Float; onDone: () => void }) {
-  const c = boundsCenter(float.id)
-  const pos: [number, number, number] = [c[0], c[1] + 8, c[2]]
   useEffect(() => {
     const t = setTimeout(onDone, 2500)
     return () => clearTimeout(t)
   }, [onDone])
   return (
-    <Html position={pos} center zIndexRange={[60, 0]} style={{ pointerEvents: 'none' }}>
-      <div className="removed-float">✅ {float.name} retiré</div>
+    <Html position={float.pos} center zIndexRange={[60, 0]} style={{ pointerEvents: 'none' }}>
+      <div className="removed-float">✅ {float.text}</div>
     </Html>
   )
 }
@@ -143,6 +184,8 @@ export function DisassemblyScene() {
   const phase = useExercise((s) => s.phase)
   const flash = useDis((s) => s.flash)
   const floats = useDis((s) => s.floats)
+  const powered = useDis((s) => s.powered)
+  const plugFlash = useDis((s) => s.plugFlash)
 
   return (
     <>
@@ -152,7 +195,8 @@ export function DisassemblyScene() {
         highlights={flash}
         onPartClick={removePart}
       />
-      {phase === 'play' && <ConnectedPeripherals />}
+      {/* Allumé, les fiches répondent aussi au clic : on explique qu'il faut éteindre. */}
+      {phase === 'play' && <ConnectedPeripherals onUnplug={unplugPeripheral} flash={powered ? null : plugFlash} />}
       {floats.map((f) => (
         <RemovedFloat
           key={f.key}
@@ -166,17 +210,18 @@ export function DisassemblyScene() {
 
 /* ---------------- Interface ---------------- */
 
-export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') => void }) {
+export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }) {
   const ex = useExercise()
   const installed = useBuild((s) => s.installed)
   const finished = useDis((s) => s.finished)
   const powered = useDis((s) => s.powered)
   const periUnplugged = useDis((s) => s.periUnplugged)
+  const plugged = useBuild((s) => s.plugged)
   const [result, setResult] = useState<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
   const ready = useReady()
 
   useEffect(() => {
-    useDis.setState({ flash: {}, finished: false, powered: true, periUnplugged: false, floats: [] })
+    useDis.setState({ flash: {}, finished: false, powered: true, periUnplugged: false, plugFlash: null, floats: [] })
     useExercise.getState().begin('demontage', INSTALLABLE_IDS.length)
     useBuild.getState().resetBuild(ALL_INSTALLED)
     useBuild.getState().set({
@@ -197,6 +242,14 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
     if (ready && finished && !result) setResult(useExercise.getState().finish())
   }, [ready, finished, result])
 
+  /* Les fiches sont à l'arrière : on y tourne la caméra le temps de les débrancher,
+     puis on revient dans la machine pour la suite. */
+  useEffect(() => {
+    if (ex.phase !== 'play') return
+    if (!powered && !periUnplugged) onView?.('debranchement')
+    else if (periUnplugged) onView?.('inside')
+  }, [ex.phase, powered, periUnplugged, onView])
+
   const removable = installed.filter((id) => id !== 'case' && blockers(id, installed).length === 0)
   const step3 = !powered && periUnplugged
 
@@ -205,17 +258,21 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
       useExercise.getState().hint()
       useExercise
         .getState()
-        .info('Commence par éteindre', 'Clique sur le bouton « Éteindre le PC », à gauche du curseur de vue éclatée.')
+        .info('Commence par éteindre', 'Clique sur le bouton « Éteindre le PC », en haut de l\'écran.')
       return
     }
     if (!periUnplugged) {
+      const next = Object.keys(plugged)[0]
+      if (!next) return
       useExercise.getState().hint()
       useExercise
         .getState()
         .info(
           'Débranche les périphériques',
-          'Clique sur le bouton « Débrancher les périphériques », à droite du curseur.',
+          `Clique sur la fiche qui clignote en jaune : celle de ${minuscule(PERIPHERAL_BY_ID[next]?.name ?? 'ce périphérique')}. Une à une, toutes les fiches doivent sortir de leur prise.`,
         )
+      useDis.setState({ plugFlash: next })
+      setTimeout(() => useDis.setState((s) => (s.plugFlash === next ? { plugFlash: null } : s)), 2600)
       return
     }
     const next = removable[0]
@@ -234,10 +291,10 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
       <ExerciseIntro onStart={() => onView?.('inside')}>
         <div className="intro-tips">
           <div>
-            <b>1️⃣ Éteindre</b> le PC (bouton à gauche du curseur) — les ventilateurs s'arrêtent
+            <b>1️⃣ Éteindre</b> le PC (bouton en haut) — les ventilateurs s'arrêtent
           </div>
           <div>
-            <b>2️⃣ Débrancher</b> tous les câbles des périphériques (bouton à droite)
+            <b>2️⃣ Débrancher</b> chaque périphérique : clique sur chaque fiche, à l'arrière
           </div>
           <div>
             <b>3️⃣ Démonter</b> les composants, jamais un qui en supporte un autre
@@ -247,43 +304,28 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
 
       {ex.phase === 'play' && (
         <>
-          <ExplodeSlider
-            wide
-            left={
-              <button
-                type="button"
-                className={`disasm-btn ${!powered ? 'pressed' : ''}`}
-                disabled={!powered}
-                title="Éteindre le PC avant toute manipulation"
-                onClick={() => {
-                  sfx.click()
-                  useDis.setState({ powered: false })
-                  useBuild.getState().set({ running: false, powered: false })
-                }}
-              >
-                ⏻ {powered ? 'Éteindre le PC' : 'PC éteint'}
-              </button>
-            }
-            right={
-              <button
-                type="button"
-                className={`disasm-btn ${periUnplugged ? 'pressed' : powered ? 'waiting' : ''}`}
-                disabled={powered || periUnplugged}
-                title={
-                  powered
-                    ? "Éteins d'abord le PC"
-                    : 'Débrancher tous les câbles des périphériques'
-                }
-                onClick={() => {
-                  sfx.pick()
-                  useBuild.getState().set({ plugged: {} })
-                  useDis.setState({ periUnplugged: true })
-                }}
-              >
-                🔌 {periUnplugged ? 'Périphériques débranchés' : 'Débrancher les périphériques'}
-              </button>
-            }
-          />
+          <div className="disasmbar card">
+            <button
+              type="button"
+              className={`disasm-btn ${!powered ? 'pressed' : ''}`}
+              disabled={!powered}
+              title="Éteindre le PC avant toute manipulation"
+              onClick={() => {
+                sfx.click()
+                useDis.setState({ powered: false })
+                useBuild.getState().set({ running: false, powered: false })
+              }}
+            >
+              ⏻ {powered ? 'Éteindre le PC' : 'PC éteint'}
+            </button>
+            <span className="disasmbar-arrow">→</span>
+            <span className={`disasm-btn disasm-status ${periUnplugged ? 'pressed' : powered ? 'waiting' : ''}`}>
+              🔌{' '}
+              {periUnplugged
+                ? 'Périphériques débranchés'
+                : `Fiches à débrancher : ${Object.keys(plugged).length}`}
+            </span>
+          </div>
 
           <div className="tools card tools-thin">
             <div className="tools-legend">
@@ -294,7 +336,7 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
               ) : powered ? (
                 <>Étape 1 : <b>éteindre</b> le PC</>
               ) : (
-                <>Étape 2 : <b>débrancher</b> les périphériques</>
+                <>Étape 2 : <b>débrancher</b> chaque fiche ({Object.keys(plugged).length} restante{Object.keys(plugged).length > 1 ? 's' : ''})</>
               )}
             </div>
             {step3 && (
@@ -329,12 +371,12 @@ export function DisassemblyUi({ onView }: { onView?: (v: 'inside' | 'overview') 
               </>
             ) : powered ? (
               <>
-                <span>⏻</span> Commence par éteindre le PC : bouton à gauche du curseur
+                <span>⏻</span> Commence par éteindre le PC : bouton « Éteindre le PC », en haut
               </>
             ) : (
               <>
-                <span>🔌</span> Débranche maintenant les câbles des périphériques : bouton à droite
-                du curseur
+                <span>🔌</span> Débranche maintenant les périphériques : clique sur chaque fiche
+                branchée à l'arrière de l'unité centrale, une par une
               </>
             )}
           </div>

@@ -102,10 +102,32 @@ function atelier(): {
   get(k: string): string | null
   set(k: string, v: string): void
   del(k: string): void
+  enLigne?(): boolean
+  eleve?(): unknown
 } | null {
   if (typeof window === 'undefined') return null
   return (window as unknown as Record<string, unknown>).Store as never
 }
+
+/**
+ * Vrai tant qu'un élève est connecté et que le serveur n'a pas encore répondu.
+ *
+ * Le Store démarre sur le cache du poste, qui peut être ancien ou ne pas contenir
+ * « Le PC » du tout (l'élève n'a fait qu'un atelier sur ce poste). Pendant ce temps,
+ * le jeu écrit déjà : l'accueil recopie le prénom du compte dans le pseudo, ce qui
+ * réécrit toute la progression — vide. Le Store tient alors cette écriture pour plus
+ * récente que le serveur : elle part au bout de 2,5 s et, à la réponse, elle passe
+ * par-dessus la vraie progression. Avec un serveur lent à se réveiller, l'élève
+ * repartait du chapitre 1 et le serveur était écrasé.
+ *
+ * Rien n'est donc écrit avant la réponse (`store:maj`, émis aussi si le serveur est
+ * injoignable ou la session expirée). La relecture remet alors l'état du serveur, et
+ * ce que l'élève a gagné pendant l'attente y est reporté (reporterGains).
+ */
+let attenteServeur = (() => {
+  const S = atelier()
+  return !!(S && S.enLigne?.() && S.eleve?.())
+})()
 
 /**
  * Stockage tolérant aux pannes.
@@ -126,7 +148,10 @@ const safeStorage = {
       /* Reprise de l'ancienne clé : un élève qui avait déjà joué sur ce poste avant le
          partage de comptes ne repart pas de zéro. On efface la vieille clé aussitôt
          recopiée — sinon elle ressusciterait le jour où la nouvelle est légitimement
-         vide (compte réinitialisé par le professeur, par exemple). */
+         vide (compte réinitialisé par le professeur, par exemple).
+         Hors compte seulement : cette vieille partie appartient au POSTE, pas à l'élève
+         connecté, et la recopier dans son compte passerait par-dessus sa progression. */
+      if (S.eleve?.()) return null
       try {
         const vieux = window.localStorage.getItem(CLE_HERITEE)
         if (vieux) {
@@ -155,6 +180,7 @@ const safeStorage = {
           `Découper la clé « ${CLE} » avant d'ajouter d'autres chapitres.`,
       )
     }
+    if (attenteServeur) return
     const S = atelier()
     if (S) {
       S.set(k, v)
@@ -356,18 +382,6 @@ export function starsFor(mistakes: number, hintsUsed: number): 0 | 1 | 2 | 3 {
 }
 
 /**
- * Le Store de l'Atelier démarre sur son cache local, puis interroge le serveur. Quand la
- * réponse arrive et qu'elle change quelque chose, il émet `store:maj` — une seule fois,
- * à l'amorçage. Sans cette relecture, un élève qui a joué sur un autre poste verrait ici
- * son ancienne progression, et l'écraserait au premier chapitre terminé.
- */
-if (typeof document !== 'undefined') {
-  document.addEventListener('store:maj', () => {
-    void useGame.persist.rehydrate()
-  })
-}
-
-/**
  * Applique l'instruction d'ouverture posée par le professeur.
  *
  * « Ouvrir jusqu'au chapitre N » se traduit ici, et nulle part ailleurs : un chapitre est
@@ -398,11 +412,74 @@ function appliquerDeblocage() {
   oublierDeblocage()
 }
 
-/* À l'amorçage, puis quand la réponse du serveur arrive : le professeur peut avoir
-   cliqué pendant que l'élève avait l'application ouverte ailleurs. */
-appliquerDeblocage()
+/* Sans compte, tout est là dès l'amorçage. Avec un compte, on attend la réponse du
+   serveur : l'instruction lue dans un cache ancien serait effacée (oublierDeblocage)
+   alors que l'ouverture, elle, ne serait pas encore enregistrée. */
+if (!attenteServeur) appliquerDeblocage()
+
+/** L'état lu au démarrage, dans le cache du poste : point de départ des gains. */
+const auDemarrage = useGame.getState()
+
+/**
+ * Ce que l'élève a gagné pendant l'attente du serveur, reporté sur ce qu'il a répondu.
+ * D'ordinaire rien : le serveur répond en une seconde. Mais s'il met longtemps à se
+ * réveiller, un chapitre terminé entre-temps ne doit pas disparaître pour autant.
+ * Seul le GAIN est reporté, pas le cache de départ : un compte remis à zéro par le
+ * professeur ne doit pas ressusciter.
+ */
+function nouveaux<T>(liste: T[], depart: T[], deja: T[]): T[] {
+  return liste.filter((x) => !depart.includes(x) && !deja.includes(x))
+}
+
+function reporterGains(avant: GameState) {
+  const s = useGame.getState()
+  const results = { ...s.results }
+  let change = false
+  for (const ch of CHAPTERS) {
+    const r = avant.results[ch.id]
+    if (!r || r === auDemarrage.results[ch.id]) continue
+    const prev = results[ch.id]
+    if (!prev?.done || r.stars > prev.stars || (r.stars === prev.stars && r.bestScore > prev.bestScore)) {
+      results[ch.id] = r
+      change = true
+    }
+  }
+  const badges = nouveaux(avant.badges, auDemarrage.badges, s.badges)
+  const discovered = nouveaux(avant.discovered, auDemarrage.discovered, s.discovered)
+  const xp = Math.max(0, avant.xp - auDemarrage.xp)
+  if (!change && !badges.length && !discovered.length && !xp) return
+  useGame.setState({
+    results,
+    badges: [...s.badges, ...badges],
+    discovered: [...s.discovered, ...discovered],
+    xp: s.xp + xp,
+  })
+}
+
+/**
+ * Le Store de l'Atelier démarre sur son cache local, puis interroge le serveur. Quand la
+ * réponse arrive, il émet `store:maj` — une seule fois, à l'amorçage (y compris quand
+ * le serveur est injoignable ou la session expirée). Sans cette relecture, un élève qui
+ * a joué sur un autre poste verrait ici son ancienne progression.
+ *
+ * Dans cet ordre : relire la progression du serveur, y reporter ce que l'élève a gagné
+ * pendant l'attente, rouvrir l'écriture, PUIS appliquer l'ouverture de chapitres
+ * demandée par le professeur — il peut avoir cliqué pendant que l'élève avait
+ * l'application ouverte ailleurs.
+ */
 if (typeof document !== 'undefined') {
-  document.addEventListener('store:maj', appliquerDeblocage)
+  document.addEventListener('store:maj', () => {
+    const avant = useGame.getState()
+    /* Rien côté serveur : la relecture garde l'état en mémoire tel quel, gains compris.
+       Les reporter une seconde fois doublerait l'XP. */
+    const rien = safeStorage.getItem(CLE) == null
+    void Promise.resolve(useGame.persist.rehydrate()).then(() => {
+      const enAttente = attenteServeur
+      attenteServeur = false
+      if (enAttente && !rien) reporterGains(avant)
+      appliquerDeblocage()
+    })
+  })
 }
 
 /**

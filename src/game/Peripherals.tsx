@@ -383,7 +383,7 @@ function cableStart(id: PeripheralModelId): Vec3 {
 
 export function PeripheralsScene({ part = 1 }: { part?: 1 | 2 }) {
   const phase = useExercise((s) => s.phase)
-  const { order, index, snap, wrongPort, okPort, flashPort, done } = usePeri()
+  const { order, index, snap, wrongPort, okPort, flashPort, done, finished } = usePeri()
   const current = order[index]
   const handle = useRef<THREE.Group>(null)
 
@@ -433,7 +433,10 @@ export function PeripheralsScene({ part = 1 }: { part?: 1 | 2 }) {
         )
       })}
 
-      {current && (
+      {/* Tout est branché : le dernier câble (le secteur) est déjà dans sa prise. Laisser
+          sa fiche « à attraper » pendant que la machine démarre, c'était redemander le
+          câble d'alimentation une seconde fois — des élèves s'y sont laissé prendre. */}
+      {current && !finished && (
         <>
           {/* La clé USB EST sa propre fiche : elle n'a pas de socle à part */}
           {current.id !== 'usbkey' && <PeripheralStand id={current.id} />}
@@ -659,10 +662,15 @@ export function PeripheralsUi({
         peri: peri.id,
         onDismiss: () => {
           const st = usePeri.getState()
+          /* Déjà compté (fenêtre fermée deux fois, ou autre chemin) : on ne rejoue rien. */
+          if (st.done[peri.id]) return
           const done = { ...st.done, [peri.id]: port }
           useBuild.getState().plug(peri.id, port)
-          if (st.index + 1 >= st.order.length) usePeri.setState({ done, okPort: null, finished: true })
-          else usePeri.setState({ done, okPort: null, index: st.index + 1 })
+          /* Le suivant est le premier périphérique PAS ENCORE branché : jamais le même
+             deux fois, quoi qu'il arrive à l'index entre-temps. */
+          const next = st.order.findIndex((p) => !done[p.id])
+          if (next < 0) usePeri.setState({ done, okPort: null, finished: true })
+          else usePeri.setState({ done, okPort: null, index: next })
         },
       })
       return
@@ -706,7 +714,7 @@ export function PeripheralsUi({
   /* ---------------- Indices ---------------- */
 
   const hint = () => {
-    if (!current) return
+    if (!current || finished) return
     const exs = useExercise.getState()
     exs.hint()
     if (part === 1) {
@@ -772,7 +780,27 @@ export function PeripheralsUi({
         )}
       </ExerciseIntro>
 
-      {ex.phase === 'play' && current && (
+      {ex.phase === 'play' && part === 2 && finished && (
+        <div className="peri card peri-wide">
+          <div className="peri-head">
+            <span className="peri-icon">✅</span>
+            <div>
+              <h3 className="peri-name">Tout est branché !</h3>
+              <p className="peri-role">
+                {order.length} / {order.length} — le câble secteur arrive en dernier : la machine
+                démarre.
+              </p>
+            </div>
+          </div>
+          <div className="peri-progress">
+            {order.map((p) => (
+              <span key={p.id} className="dotstep on" title={p.name} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {ex.phase === 'play' && current && !(part === 2 && finished) && (
         <>
           <div className={`peri card ${part === 2 ? 'peri-wide' : ''}`}>
             <div className="peri-head">

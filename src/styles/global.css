@@ -892,6 +892,20 @@ button {
   line-height: 1.45;
 }
 
+/* ---------------- Pastille de connexion (Atelier) ---------------- */
+
+/* La pastille de compte (public/atelier/compte.js) flotte d'office en haut à gauche :
+   c'est là, dans le jeu, que vivent « ← Quitter », « ← Retour au parcours » et le
+   titre de la carte, qu'elle recouvrait. Les coins du bas sont pris eux aussi (badges,
+   établi, réglages) : on la centre en haut. Pendant un exercice, elle quitte même ce
+   flottement pour se ranger dans la barre (CompteSlot, game/Frame.tsx). Sélecteur renforcé : la feuille de compte.js est
+   ajoutée au <head> APRÈS la nôtre, elle gagnerait à spécificité égale. */
+html body .atl-chip.atl-float {
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* ---------------- Accès enseignant ---------------- */
 
 /* Volontairement effacé : présent pour qui le cherche, invisible pour la

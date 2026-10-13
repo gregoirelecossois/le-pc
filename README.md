@@ -27,7 +27,7 @@ des six ateliers — voir « Comptes élèves » plus bas.
 | 5 | 🔧 Le montage | Glisse chaque pièce à sa place, dans le bon ordre | Monter une unité centrale complète |
 | 6 | 🔌 Le câblage | Relie les 7 câbles internes aux bons connecteurs | Reconnaître les câbles et leur destination |
 | 7 | 🖥️ Les périphériques | Branche 9 périphériques à l'arrière, puis les classe | Reconnaître les prises, distinguer entrée / sortie |
-| 8 | 🧰 Le démontage | Retire les pièces dans l'ordre inverse | Démonter sans rien casser |
+| 8 | 🧰 Le démontage | Éteint, débranche chaque fiche une à une, puis retire les pièces dans l'ordre inverse | Démonter sans rien casser |
 | 9 | 🏆 Le défi du technicien | Montage complet chronométré, sans indice | Maîtriser l'ensemble |
 
 Chaque chapitre donne des **XP**, jusqu'à **3 étoiles** (selon les erreurs et

@@ -3,7 +3,7 @@
  * barre du haut, consigne de départ, bandeau de retour, écran de fin.
  */
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CHAPTER_BY_ID } from '@/data/chapters'
 import { useGame } from '@/state/useGame'
 import { useBuild } from '@/state/useBuild'
@@ -44,6 +44,31 @@ function useTicker() {
 /* ---------------------------------------------------------------- */
 /*  Barre du haut                                                    */
 /* ---------------------------------------------------------------- */
+
+/**
+ * Emplacement de la pastille de compte (public/atelier/compte.js) pendant l'exercice.
+ *
+ * Elle flotte d'office par-dessus la page, et dans un exercice il n'y a pas de place
+ * libre pour elle : en haut à gauche elle masquait « ← Quitter », au centre elle
+ * recouvrait la progression sur les écrans étroits. On la range donc DANS la barre,
+ * le temps de l'exercice, et on la rend à la page en sortant. compte.js garde sa
+ * référence au nœud : il continue de la repeindre là où elle est.
+ */
+function CompteSlot() {
+  const slot = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const chip = document.querySelector<HTMLElement>('.atl-chip.atl-float')
+    const el = slot.current
+    if (!chip || !el) return
+    chip.classList.remove('atl-float')
+    el.appendChild(chip)
+    return () => {
+      chip.classList.add('atl-float')
+      document.body.appendChild(chip)
+    }
+  }, [])
+  return <div ref={slot} className="exbar-compte" />
+}
 
 export function ExerciseBar({
   extra,
@@ -95,6 +120,7 @@ export function ExerciseBar({
       </div>
 
       <div className="spacer" />
+      <CompteSlot />
       {extra}
       {showTimer && <Counter icon="⏱️" value={fmtTime(ex.elapsed)} label="" />}
       <Counter icon="❌" value={ex.mistakes} label="erreur(s)" tone={ex.mistakes ? 'var(--bad)' : undefined} />

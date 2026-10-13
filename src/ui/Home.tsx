@@ -170,7 +170,7 @@ export function Home() {
               <p className="home-privacy">
                 {comptesDisponibles() ? (
                   <>
-                    Ou connecte-toi (en haut à gauche) pour retrouver ta progression sur
+                    Ou connecte-toi (en haut de l'écran) pour retrouver ta progression sur
                     n'importe quel poste.
                   </>
                 ) : (

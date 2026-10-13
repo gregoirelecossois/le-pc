@@ -309,6 +309,12 @@ export const CAMERA_VIEWS = {
   /** Vue arrière : connectique + périphériques */
   rear: { position: [-5, 30, 100] as Vec3, target: [0, 23, 23] as Vec3 },
   /**
+   * Démontage, débranchement : toute la face arrière, des prises USB du haut (clavier,
+   * souris) jusqu'à la prise secteur du bas. « rear » est trop serré, le haut passait
+   * sous la barre d'étapes.
+   */
+  debranchement: { position: [-4, 27, 122] as Vec3, target: [1, 24, 22] as Vec3 },
+  /**
    * Banc de branchement : la connectique arrière à gauche, le périphérique
    * et son câble à droite. Le cadre doit contenir les deux.
    */
