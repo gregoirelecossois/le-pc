@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { create } from 'zustand'
 import { useFrame, useThree } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { PORTS, PORT_BY_ID } from '@/data/ports'
 import {
@@ -257,7 +258,6 @@ function HandPlug({
   const { camera, size } = useThree()
   const g = handle
   const goal = useRef(new THREE.Vector3(...REST))
-  const halo = useRef<THREE.Group>(null)
   const dragging = useBuild((s) => s.handDrag)
 
   // Le périphérique change : la nouvelle fiche apparaît à sa place de repos
@@ -306,10 +306,6 @@ function HandPlug({
       }
     }
     grp.position.lerp(goal.current, 1 - Math.pow(0.0008, dt))
-    if (halo.current) {
-      const k = dragging ? 1 : 1 + Math.sin(performance.now() * 0.004) * 0.09
-      halo.current.scale.setScalar(k)
-    }
   })
 
   return (
@@ -332,22 +328,16 @@ function HandPlug({
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       </group>
-      {/* Halo pulsant : c'est le seul objet de la scène qu'on peut saisir */}
-      <group ref={halo}>
-        <mesh position={[0, 0, 1.6]} raycast={() => null}>
-          <sphereGeometry args={[2.8, 16, 12]} />
-          <meshBasicMaterial
-            color="#38bdf8"
-            transparent
-            opacity={dragging ? 0.06 : 0.16}
-            depthWrite={false}
-          />
-        </mesh>
-        <mesh position={[0, 0, 1.6]} rotation={[0, 0, 0]} raycast={() => null}>
-          <torusGeometry args={[3.1, 0.12, 8, 32]} />
-          <meshBasicMaterial color="#7dd3fc" transparent opacity={dragging ? 0.15 : 0.5} depthWrite={false} />
-        </mesh>
-      </group>
+      {/* C'est le seul objet de la scène qu'on peut saisir : une étiquette AU-DESSUS
+          le dit. Plus de halo bleu pulsant autour : il recouvrait la fiche, qu'on ne
+          voyait plus — or c'est sa forme qu'il faut reconnaître. */}
+      {!dragging && (
+        <group position={[0, 3.2, 1.6]}>
+          <Html center zIndexRange={[35, 0]} style={{ pointerEvents: 'none' }}>
+            <div className="tag3d grab-tag">🖐️ Attrape la fiche</div>
+          </Html>
+        </group>
+      )}
     </group>
   )
 }
@@ -451,22 +441,25 @@ export function PeripheralsScene({ part = 1 }: { part?: 1 | 2 }) {
         </>
       )}
 
-      {/* Repères sur les prises encore libres */}
+      {/* Repères : rien sur les prises au repos — l'élève doit voir leur forme et
+          leur couleur. Un anneau autour de la prise visée (fiche approchée, indice),
+          de celle qui vient d'être refusée, ou de celle qui vient d'être acceptée. */}
       {phase === 'play' &&
         PORTS.map((p) => {
-          const used = taken.has(p.id)
-          const a = portAnchor(p.id)
           const state =
             wrongPort === p.id
               ? 'bad'
-              : okPort === p.id || used
+              : okPort === p.id
                 ? 'ok'
                 : snap === p.id || flashPort === p.id
                   ? 'active'
-                  : 'idle'
+                  : null
+          if (!state) return null
+          const a = portAnchor(p.id)
           return (
             <PortMarker
               key={p.id}
+              ring
               position={[a[0], a[1], a[2] + 0.5]}
               radius={p.kind === 'jack' ? 0.85 : p.kind === 'psu' ? 1.5 : 1.05}
               state={state}
@@ -543,27 +536,40 @@ export function PeripheralsUi({
     if (done['power']) useBuild.getState().set({ running: true, powered: true })
   }, [part, done])
 
-  // Fin d'atelier. En manche 2, on laisse tourner la machine et la vue
-  // pivoter quelques secondes avant l'écran de réussite.
+  /* Fin d'atelier. En manche 2, on laisse tourner la machine et la vue pivoter
+     quelques secondes avant l'écran de réussite.
+
+     Le chapitre est ENREGISTRÉ dès le dernier branchement, pas à la fin de la
+     démonstration : si quoi que ce soit l'interrompt (l'élève quitte, la minuterie
+     ne revient pas…), la réussite et l'ouverture du chapitre suivant sont acquises.
+     Et l'écran de fin peut toujours être appelé à la main depuis la carte « Tout est
+     branché ! » — signalé en classe : il ne s'affichait pas. */
+  const bilan = useRef<{ stars: 0 | 1 | 2 | 3; xp: number } | null>(null)
+  const montrerBilan = useCallback(() => {
+    if (!bilan.current) return
+    useBuild.getState().set({ celebrate: false })
+    setResult(bilan.current)
+  }, [])
+
   useEffect(() => {
     if (!ready || !finished || result) return
     if (part !== 2) {
       setResult(useExercise.getState().finish())
       return
     }
-    /* On recule et on plonge AVANT de faire tourner la machine : le cadrage de
-       travail colle à la connectique arrière, on n'y aurait vu qu'un bout de tôle
-       défiler. Le déplacement prend moins d'une seconde, il reste largement de quoi
-       profiter de l'animation. */
-    onView?.('celebration')
-    useBuild.getState().set({ running: true, powered: true, celebrate: true })
-    sfx.boot()
-    const t = setTimeout(() => {
-      useBuild.getState().set({ celebrate: false })
-      setResult(useExercise.getState().finish())
-    }, 4600)
+    if (!bilan.current) {
+      bilan.current = useExercise.getState().finish()
+      /* On recule et on plonge AVANT de faire tourner la machine : le cadrage de
+         travail colle à la connectique arrière, on n'y aurait vu qu'un bout de tôle
+         défiler. Le déplacement prend moins d'une seconde, il reste largement de
+         quoi profiter de l'animation. */
+      onView?.('celebration')
+      useBuild.getState().set({ running: true, powered: true, celebrate: true })
+      sfx.boot()
+    }
+    const t = setTimeout(montrerBilan, 4600)
     return () => clearTimeout(t)
-  }, [ready, finished, result, part, onView])
+  }, [ready, finished, result, part, onView, montrerBilan])
 
   /* ---------------- Manche 1 : identifier ---------------- */
 
@@ -780,7 +786,7 @@ export function PeripheralsUi({
         )}
       </ExerciseIntro>
 
-      {ex.phase === 'play' && part === 2 && finished && (
+      {part === 2 && finished && !result && (
         <div className="peri card peri-wide">
           <div className="peri-head">
             <span className="peri-icon">✅</span>
@@ -796,6 +802,11 @@ export function PeripheralsUi({
             {order.map((p) => (
               <span key={p.id} className="dotstep on" title={p.name} />
             ))}
+          </div>
+          <div className="tray-foot">
+            <Btn variant="primary" size="sm" onClick={montrerBilan}>
+              Voir mon résultat →
+            </Btn>
           </div>
         </div>
       )}
@@ -833,7 +844,7 @@ export function PeripheralsUi({
                 <div className="peri-ask">
                   <b>Où la branches-tu&nbsp;?</b>
                   <span className="faint">
-                    Attrape la fiche bleue et fais-la glisser sur la bonne prise.
+                    Attrape la fiche au bout du câble et fais-la glisser sur la bonne prise.
                   </span>
                 </div>
               </>

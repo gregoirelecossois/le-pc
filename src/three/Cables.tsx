@@ -250,21 +250,46 @@ export function PortMarker({
   state = 'idle',
   label,
   onClick,
+  ring = false,
 }: {
   position: Vec3
   radius?: number
   state?: MarkerState
   label?: string
   onClick?: () => void
+  /**
+   * Un simple anneau AUTOUR de la prise, fixe, au lieu de la boule pulsante posée
+   * dessus : au branchement, la boule cachait justement ce qu'il faut regarder — la
+   * forme de la prise, et la couleur de son intérieur (USB 2.0 noir, USB 3.0 bleu).
+   */
+  ring?: boolean
 }) {
   const g = useRef<THREE.Group>(null)
   useFrame((s) => {
     if (!g.current) return
     const k =
-      state === 'idle' || state === 'dim' ? 1 : 1 + Math.sin(s.clock.elapsedTime * 5) * 0.16
+      ring || state === 'idle' || state === 'dim' ? 1 : 1 + Math.sin(s.clock.elapsedTime * 5) * 0.16
     g.current.scale.setScalar(k)
   })
   const color = MARKER_COLOR[state]
+
+  if (ring) {
+    return (
+      <group position={position}>
+        <mesh raycast={NO_HIT}>
+          <torusGeometry args={[radius * 1.15, 0.11, 8, 40]} />
+          <meshBasicMaterial color={color} transparent opacity={0.95} depthWrite={false} />
+        </mesh>
+        {label && (
+          <Html position={[0, radius + 1.4, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: 'none' }}>
+            <div className="tag3d" style={{ borderColor: color }}>
+              {label}
+            </div>
+          </Html>
+        )}
+      </group>
+    )
+  }
 
   return (
     <group position={position}>

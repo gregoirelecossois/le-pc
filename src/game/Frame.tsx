@@ -306,9 +306,12 @@ export function ExerciseEnd({ result }: { result: { stars: 0 | 1 | 2 | 3; xp: nu
   // se poser par-dessus une fenêtre que l'élève est en train de lire.
   const pending = !!ex.feedback
 
+  // Le son accompagne la fenêtre, pas le passage à « terminé » : au chapitre 8,
+  // le chapitre est enregistré avant la démonstration, la fenêtre vient après.
+  const shown = !!result
   useEffect(() => {
-    if (ex.phase === 'done' && !pending) sfx.badge()
-  }, [ex.phase, pending])
+    if (ex.phase === 'done' && !pending && shown) sfx.badge()
+  }, [ex.phase, pending, shown])
 
   if (ex.phase !== 'done' || pending || !ch || !result) return null
 
