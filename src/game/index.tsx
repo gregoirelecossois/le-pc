@@ -21,7 +21,7 @@ export const CHAPTER_VIEW: Record<ChapterId, CameraViewId> = {
   cablage: 'cablage',
   peripheriques: 'showcase',
   branchement: 'branchement',
-  demontage: 'inside',
+  demontage: 'debranchement',
   defi: 'inside',
 }
 

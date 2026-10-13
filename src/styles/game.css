@@ -63,6 +63,24 @@
   color: var(--fg-dim);
 }
 
+/* Pastille de compte rangée dans la barre (CompteSlot) */
+.exbar-compte {
+  display: flex;
+}
+.exbar-compte:empty {
+  display: none;
+}
+/* Écran étroit : la barre passerait sur deux lignes, et « Indice » sous le panneau.
+   On ne garde que le point de couleur, comme compte.js le fait déjà sur téléphone. */
+@media (max-width: 1240px) {
+  .exbar-compte .atl-txt {
+    display: none;
+  }
+  .exbar-compte .atl-chip {
+    padding: 6px 9px;
+  }
+}
+
 /* ---------------- Panneau d'outils (gauche) ---------------- */
 
 .tools {
@@ -816,6 +834,35 @@
     right: 16px;
     transform: none;
     width: min(340px, calc(100% - 300px));
+  }
+}
+
+/* Démontage : les deux étapes préalables, à la place du curseur de vue éclatée
+   (on démonte pièce par pièce, sans écarter la machine). */
+.disasmbar {
+  position: absolute;
+  left: 50%;
+  top: 74px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  max-width: calc(100% - 32px);
+}
+.disasmbar-arrow {
+  color: var(--fg-faint);
+  font-weight: 800;
+}
+.disasm-status {
+  /* Un état, pas un bouton : ce sont les fiches, dans la 3D, qui se cliquent. */
+  pointer-events: none;
+}
+@media (max-width: 1080px) {
+  .disasmbar {
+    left: auto;
+    right: 16px;
+    transform: none;
   }
 }
 
