@@ -104,6 +104,7 @@ function atelier(): {
   del(k: string): void
   enLigne?(): boolean
   eleve?(): unknown
+  serveurLu?(): boolean
 } | null {
   if (typeof window === 'undefined') return null
   return (window as unknown as Record<string, unknown>).Store as never
@@ -123,10 +124,15 @@ function atelier(): {
  * Rien n'est donc écrit avant la réponse (`store:maj`, émis aussi si le serveur est
  * injoignable ou la session expirée). La relecture remet alors l'état du serveur, et
  * ce que l'élève a gagné pendant l'attente y est reporté (reporterGains).
+ *
+ * On demande d'abord au Store si la réponse est déjà là : avec un serveur rapide,
+ * `store:maj` part avant que ce module ne soit chargé, et l'attendre ici bloquerait
+ * toute écriture jusqu'à la fin de la séance.
  */
 let attenteServeur = (() => {
   const S = atelier()
-  return !!(S && S.enLigne?.() && S.eleve?.())
+  if (!(S && S.enLigne?.() && S.eleve?.())) return false
+  return S.serveurLu ? !S.serveurLu() : true
 })()
 
 /**
