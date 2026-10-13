@@ -25,6 +25,11 @@
  * `maison_eleve_v1` : cette page le relit, et ne redemande rien. En retour, elle écrit
  * son avancée dans `maison_avancees_v1`, pour que la tuile de la page d'entrée la montre.
  * Ouverte directement, sans passer par l'entrée, elle garde son propre accueil.
+ *
+ * MODE PROFESSEUR (`?prof=1`, posé par l'entrée en mode professeur et par le bouton
+ * « Essayer » de la page de suivi) : l'élève est « Prof », toutes les missions sont
+ * ouvertes, rien ne part au serveur et rien n'est gardé sur l'appareil — l'élève et
+ * l'avancée éventuellement rangés là ne sont pas touchés. Recharger, c'est recommencer.
  */
 
 import { create } from 'zustand'
@@ -84,6 +89,7 @@ function memeOrigine(adresse: string): boolean {
 }
 
 function lireEntree(): Entree | null {
+  if (PROF) return null
   try {
     const e = JSON.parse(localStorage.getItem(CLE_ELEVE) ?? 'null') as Partial<Entree> | null
     if (!e || typeof e.prenom !== 'string' || !PRENOM_OK.test(e.prenom) || typeof e.classe !== 'string' || !e.classe) {
@@ -105,6 +111,11 @@ function lireEntree(): Entree | null {
 
 /* ---- Le lien ---- */
 
+/** Le professeur essaie la page : rien n'est envoyé, rien n'est gardé. */
+export const PROF = new URLSearchParams(location.search).has('prof')
+/** Où revient le professeur : l'entrée, en mode professeur elle aussi. */
+export const ENTREE_PROF = 'https://gregoirelecossois.github.io/travaux-maison/?prof=1'
+
 const config = (window as unknown as { ATELIER_CONFIG?: { api?: string } }).ATELIER_CONFIG
 /** Adresse du serveur de l'Atelier ('' = aucun). */
 export const API = String(config?.api ?? '').replace(/\/+$/, '')
@@ -114,7 +125,7 @@ export const ENTREE = lireEntree()
  *  défaut, gardé par la page d'entrée. */
 export const CODE = ((new URLSearchParams(location.search).get('c') ?? '').trim() || ENTREE?.code || '').toLowerCase()
 /** Le professeur verra-t-il ce travail ? */
-export const SUIVI_ACTIF = !!API && /^[a-z0-9]{6,16}$/.test(CODE)
+export const SUIVI_ACTIF = !PROF && !!API && /^[a-z0-9]{6,16}$/.test(CODE)
 
 /* ---- Le téléphone ---- */
 
@@ -232,7 +243,7 @@ async function envoyer() {
 
 function persister() {
   const s = useSuivi.getState()
-  if (!s.inscrit) return
+  if (!s.inscrit || PROF) return
   ecrire({ id: s.id, prenom: s.prenom, classe: s.classe, scores: s.scores, aEnvoyer: s.aEnvoyer })
   if (ENTREE) {
     // Pour la tuile de la page d'entrée : où j'en suis, en quatre nombres.
@@ -255,8 +266,10 @@ const memeEleve = (a: { prenom: string; classe: string }, b: { prenom: string; c
 /* Passé par la page d'entrée : c'est ELLE qui dit qui est l'élève. Si quelqu'un d'autre
    s'y est déclaré depuis (« Ce n'est pas toi ? »), l'avancée gardée ici n'est pas la
    sienne : il repart de zéro, et la ligne du précédent reste chez le professeur. */
-const garde = lire()
-const depart: Sauvegarde | null = ENTREE
+const garde = PROF ? null : lire()
+const depart: Sauvegarde | null = PROF
+  ? { id: '', prenom: 'Prof', classe: '', scores: MISSIONS.map(() => -1), aEnvoyer: false }
+  : ENTREE
   ? garde && memeEleve(garde, ENTREE)
     ? { ...garde, prenom: ENTREE.prenom }
     : { id: nouvelId(), prenom: prenomPropre(ENTREE.prenom), classe: ENTREE.classe, scores: MISSIONS.map(() => -1), aEnvoyer: true }
