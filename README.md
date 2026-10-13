@@ -58,22 +58,25 @@ phrase, une image mentale, où elle se trouve, un bouton 🔊 pour l'écouter) p
 | 4 | 🧩 Chacun à sa place | carte graphique, ventilateur, pile | Tri : carte mère ou boîtier | 6 |
 | 5 | 🏆 Le défi final | toutes | Quiz mêlé | 8 |
 
-**L'élève n'a pas de compte.** Il arrive normalement par la **page d'entrée de l'Atelier**,
-`atelier-informatique/maison.html?c=CODE` — le même lien toute l'année, affiché par la
-page de suivi `travail-maison.html` — où il a donné son prénom et sa classe une fois, et
-où « Le PC à la maison » est une tuile parmi les révisions de sa classe. Les deux pages
+**L'élève n'a pas de compte à ouvrir.** Il arrive normalement par la **page d'entrée du
+travail à la maison**, `travaux-maison/?c=CODE` (dépôt `travaux-maison`) — le même lien
+toute l'année, affiché par la page de suivi `travail-maison.html` de l'Atelier — où il a
+donné son prénom et sa classe une fois, a pu dire « C'est moi » au compte de l'Atelier
+qu'elle lui proposait, et où « Le PC à la maison » est une tuile parmi les révisions de
+sa classe. C'est aussi là, dans `catalogue.js`, que ce travail est déclaré (`pc-1`). Les deux pages
 vivent sur le même domaine (`gregoirelecossois.github.io`) et se parlent par le
 navigateur du téléphone :
 
 | Clé `localStorage` | Écrite par | Contenu |
 |---|---|---|
-| `maison_eleve_v1` | la page d'entrée | `{ appareil, prenom, classe, code, entree }` — cette page ne redemande rien |
+| `maison_eleve_v1` | la page d'entrée | `{ appareil, prenom, classe, code, entree, compte, nom, verifie }` — cette page ne redemande rien |
 | `maison_avancees_v1` | cette page | `{ "pc-1": { etape, etapes, score, max } }` — pour la tuile |
 
 Si quelqu'un d'autre s'est déclaré sur la page d'entrée depuis (« Ce n'est pas toi ? »),
-l'avancée gardée ici repart de zéro. L'identifiant `appareil` part avec chaque envoi : il
-permet au serveur de relier tout seul ce devoir à l'élève que l'enseignant a déjà reconnu
-sur un autre (api/README.md § 4 bis).
+l'avancée gardée ici repart de zéro. Le `compte` confirmé par l'élève et l'identifiant
+`appareil` partent avec chaque envoi : le premier range ce devoir sous son compte de
+l'Atelier, le second permet au serveur de le relier tout seul à l'élève que l'enseignant
+a déjà reconnu sur un autre (api/README.md § 4 bis).
 
 Ouverte directement (`maison.html?c=CODE`), la page garde son propre accueil prénom +
 classe. Sans code, ni ici ni dans la page d'entrée, elle fonctionne en **entraînement** :
