@@ -937,3 +937,9 @@
 .speakbtn-head {
   margin-left: auto;
 }
+
+/* Chapitre 8 : l'étiquette posée au-dessus de la fiche à attraper (à la place du halo) */
+.grab-tag {
+  border-color: #7dd3fc;
+  white-space: nowrap;
+}

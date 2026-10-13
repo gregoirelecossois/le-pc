@@ -131,7 +131,10 @@ export const PERIPHERALS: Peripheral[] = [
     distractors: ['La télécommande', 'La calculatrice', 'La tablette graphique'],
     plug: 'usb-a',
     plugName: 'une fiche USB-A',
-    plugHint: "Le rectangle métallique classique. Il ne se branche que dans un sens : la languette vers le bas.",
+    plugHint:
+      "Le rectangle métallique classique, languette vers le bas. Branche-le sur une prise USB 2.0 " +
+      "(intérieur NOIR) : un clavier n'a pas besoin de vitesse, et les USB 3.0 (intérieur bleu) " +
+      'restent libres pour la clé USB.',
     accepts: USB2,
     ok: "Parfait. Le clavier n'a aucun besoin de vitesse : une prise noire lui suffit, et les bleues restent libres.",
     traps: USBC_TRAP,
@@ -152,7 +155,9 @@ export const PERIPHERALS: Peripheral[] = [
     distractors: ['Le pavé tactile', 'La télécommande', 'Le stylet'],
     plug: 'usb-a',
     plugName: 'une fiche USB-A',
-    plugHint: 'La même fiche rectangulaire que le clavier.',
+    plugHint:
+      'La même fiche rectangulaire que le clavier, et la même prise : une USB 2.0 (intérieur NOIR). ' +
+      'Les USB 3.0, plus rapides, sont gardées pour ce qui transfère beaucoup.',
     accepts: USB2,
     ok: 'Exact. Souris et clavier sont les deux périphériques d’entrée de base de tout ordinateur — et tous deux se contentent d’une prise noire.',
     traps: USBC_TRAP,
