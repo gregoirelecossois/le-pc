@@ -252,7 +252,7 @@ function CarteMissions({ onMission }: { onMission: (i: number) => void }) {
       <footer className="pied">
         {PROF ? (
           <a className="lien-discret" href={ENTREE_PROF}>
-            ← Tous les travaux (mode professeur)
+            ← Retour au suivi des élèves
           </a>
         ) : ENTREE?.entree ? (
           // Venu par la page d'entrée : c'est là qu'on change d'élève, et qu'on retrouve

@@ -26,10 +26,10 @@
  * son avancée dans `maison_avancees_v1`, pour que la tuile de la page d'entrée la montre.
  * Ouverte directement, sans passer par l'entrée, elle garde son propre accueil.
  *
- * MODE PROFESSEUR (`?prof=1`, posé par l'entrée en mode professeur et par le bouton
- * « Essayer » de la page de suivi) : l'élève est « Prof », toutes les missions sont
- * ouvertes, rien ne part au serveur et rien n'est gardé sur l'appareil — l'élève et
- * l'avancée éventuellement rangés là ne sont pas touchés. Recharger, c'est recommencer.
+ * MODE PROFESSEUR (`?prof=1`, posé par le bouton « Essayer » de la page de suivi) :
+ * l'élève est « Prof », toutes les missions sont ouvertes, rien ne part au serveur et
+ * rien n'est gardé sur l'appareil — l'élève et l'avancée éventuellement rangés là ne
+ * sont pas touchés. Recharger, c'est recommencer. Le lien du bas ramène au suivi.
  */
 
 import { create } from 'zustand'
@@ -113,8 +113,8 @@ function lireEntree(): Entree | null {
 
 /** Le professeur essaie la page : rien n'est envoyé, rien n'est gardé. */
 export const PROF = new URLSearchParams(location.search).has('prof')
-/** Où revient le professeur : l'entrée, en mode professeur elle aussi. */
-export const ENTREE_PROF = 'https://gregoirelecossois.github.io/travaux-maison/?prof=1'
+/** Où revient le professeur : sa page de suivi, sur la fiche de ce travail. */
+export const ENTREE_PROF = `https://gregoirelecossois.github.io/atelier-informatique/travail-maison.html#${DEVOIR}`
 
 const config = (window as unknown as { ATELIER_CONFIG?: { api?: string } }).ATELIER_CONFIG
 /** Adresse du serveur de l'Atelier ('' = aucun). */
