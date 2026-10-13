@@ -22,7 +22,9 @@ import { Garde, Toile, Tourne, WEBGL } from './scene3d'
 import {
   CODE,
   ENTREE,
+  ENTREE_PROF,
   PRENOM_OK,
+  PROF,
   SUIVI_ACTIF,
   etapesFaites,
   etoiles,
@@ -57,6 +59,7 @@ const TEXTE_ENVOI: Record<EtatEnvoi, string> = {
 
 function Envoi() {
   const envoi = useSuivi((s) => s.envoi)
+  if (PROF) return <p className="envoi entrainement">Mode professeur : rien n’est envoyé, rien n’est gardé.</p>
   return <p className={`envoi ${envoi}`}>{TEXTE_ENVOI[envoi]}</p>
 }
 
@@ -201,7 +204,8 @@ function CarteMissions({ onMission }: { onMission: (i: number) => void }) {
         {MISSIONS.map((m, i) => {
           const max = pointsDuJeu(m.jeu)
           const faite = scores[i] >= 0
-          const ouverte = faite || i === prochaine
+          // Le professeur essaie : toutes les missions, dans l'ordre qu'il veut.
+          const ouverte = faite || i === prochaine || PROF
           return (
             <li key={m.id}>
               <button
@@ -246,7 +250,11 @@ function CarteMissions({ onMission }: { onMission: (i: number) => void }) {
       )}
 
       <footer className="pied">
-        {ENTREE?.entree ? (
+        {PROF ? (
+          <a className="lien-discret" href={ENTREE_PROF}>
+            ← Tous les travaux (mode professeur)
+          </a>
+        ) : ENTREE?.entree ? (
           // Venu par la page d'entrée : c'est là qu'on change d'élève, et qu'on retrouve
           // ses autres révisions.
           <a className="lien-discret" href={ENTREE.entree + (CODE ? `?c=${encodeURIComponent(CODE)}` : '')}>
