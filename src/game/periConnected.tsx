@@ -60,10 +60,13 @@ const HIT: Record<PlugKind, [number, number]> = {
 function UnplugTarget({
   peri,
   flash,
+  quiet,
   onUnplug,
 }: {
   peri: Peripheral
   flash: boolean
+  /** Cliquable, mais sans halo : ce n'est pas encore le moment (PC allumé) */
+  quiet: boolean
   onUnplug: (id: string) => void
 }) {
   const mat = useRef<THREE.MeshBasicMaterial>(null)
@@ -74,7 +77,7 @@ function UnplugTarget({
   useFrame(() => {
     if (!mat.current) return
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.005)
-    mat.current.opacity = over ? 0.7 : flash ? 0.35 + 0.45 * pulse : 0.25 + 0.25 * pulse
+    mat.current.opacity = quiet ? 0 : over ? 0.7 : flash ? 0.35 + 0.45 * pulse : 0.25 + 0.25 * pulse
   })
 
   return (
@@ -89,7 +92,7 @@ function UnplugTarget({
       onPointerOver={(e) => {
         e.stopPropagation()
         setOver(true)
-        document.body.style.cursor = 'pointer'
+        if (!quiet) document.body.style.cursor = 'pointer'
       }}
       onPointerOut={() => {
         setOver(false)
@@ -111,11 +114,14 @@ function UnplugTarget({
 export function ConnectedPeripherals({
   onUnplug,
   flash = null,
+  quiet = false,
 }: {
   /** Fourni : chaque fiche se débranche d'un clic. Absent : simple décor. */
   onUnplug?: (periId: string) => void
   /** Fiche mise en évidence par l'indice */
   flash?: string | null
+  /** Fiches cliquables mais sans halo (le PC n'est pas encore éteint) */
+  quiet?: boolean
 } = {}) {
   const plugged = useBuild((s) => s.plugged)
 
@@ -129,7 +135,7 @@ export function ConnectedPeripherals({
           <group key={periId}>
             <group position={[a[0], a[1], a[2] + 0.6]}>
               <PlugHead peri={p} />
-              {onUnplug && <UnplugTarget peri={p} flash={flash === periId} onUnplug={onUnplug} />}
+              {onUnplug && <UnplugTarget peri={p} flash={flash === periId} quiet={quiet} onUnplug={onUnplug} />}
             </group>
             {p.id !== 'usbkey' && (
               <FlexCable

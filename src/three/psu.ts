@@ -74,3 +74,17 @@ export function psuPlugTail(id: PsuSocketId): Vec3 {
   const { center } = psuSocket(id)
   return [center[0], center[1], center[2] - PSU_PLUG_DEPTH]
 }
+
+/**
+ * L'interrupteur O / I, au dos du bloc, en coordonnées MONDE (bloc installé) : centre
+ * de sa bascule et taille en centimètres. Sert au démontage, où l'élève éteint la
+ * machine en cliquant DESSUS (voir `buildPsu`, « Dos : prise secteur et interrupteur »).
+ */
+export function psuSwitch() {
+  const c = new THREE.Vector3(1.7, 2.01, -3.018).applyMatrix4(PSU_PLACE)
+  const p = SLOTS.psu.position
+  return {
+    center: [p[0] + c.x, p[1] + c.y, p[2] + c.z] as Vec3,
+    size: [0.49 * PSU_SX, 0.68 * PSU_SX, 0.105 * PSU_SZ] as Vec3,
+  }
+}

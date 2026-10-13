@@ -3,7 +3,7 @@
  *
  * On part d'une machine complète, allumée et reliée à ses périphériques.
  * L'ordre est imposé :
- *   1. ÉTEINDRE le PC          (bouton en haut, à enfoncement unique)
+ *   1. ÉTEINDRE le PC          (clic sur l'interrupteur O / I, au dos de l'alimentation)
  *   2. DÉBRANCHER chaque fiche, une par une, en cliquant dessus à l'arrière
  *   3. RETIRER les composants  (en commençant par ce qui est posé par-dessus)
  *
@@ -16,7 +16,9 @@
  * ordre de dépendance garde la fenêtre « Pas encore ».
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import type * as THREE from 'three'
 import { create } from 'zustand'
 import { Html } from '@react-three/drei'
 import { COMPONENTS, INSTALLABLE_IDS, placedShortName, type ComponentId } from '@/data/components'
@@ -25,6 +27,7 @@ import { ALL_INSTALLED, useBuild } from '@/state/useBuild'
 import { PcRig, type HighlightKind } from '@/three/PcRig'
 import { asPart } from '@/three/models'
 import { boundsCenter, type CameraViewId, type Vec3 } from '@/three/layout'
+import { psuSwitch } from '@/three/psu'
 import { ExerciseBar, ExerciseEnd, ExerciseIntro, useReady } from './Frame'
 import { ConnectedPeripherals, DEMO_CONNECTED, portAnchor } from './periConnected'
 import { useExercise } from './useExercise'
@@ -40,8 +43,10 @@ interface Float {
 interface DisState {
   flash: Partial<Record<ComponentId, HighlightKind>>
   finished: boolean
-  /** Le PC est-il encore sous tension ? (bouton « Éteindre ») */
+  /** Le PC est-il encore sous tension ? (interrupteur O / I de l'alimentation) */
   powered: boolean
+  /** L'indice montre l'interrupteur */
+  switchFlash: boolean
   /** Toutes les fiches des périphériques ont-elles été retirées ? */
   periUnplugged: boolean
   /** Fiche mise en évidence par l'indice */
@@ -53,6 +58,7 @@ const useDis = create<DisState>()(() => ({
   flash: {},
   finished: false,
   powered: true,
+  switchFlash: false,
   periUnplugged: false,
   plugFlash: null,
   floats: [],
@@ -62,7 +68,7 @@ let floatSeq = 1
 
 /** Remet l'atelier au tout début (machine remontée, boutons non enfoncés). */
 function restartDisassembly() {
-  useDis.setState({ flash: {}, finished: false, powered: true, periUnplugged: false, plugFlash: null, floats: [] })
+  useDis.setState({ flash: {}, finished: false, powered: true, switchFlash: false, periUnplugged: false, plugFlash: null, floats: [] })
   useExercise.getState().begin('demontage', INSTALLABLE_IDS.length)
   useBuild.getState().resetBuild(ALL_INSTALLED)
   useBuild.getState().set({
@@ -83,7 +89,7 @@ function minuscule(nom: string) {
 /**
  * Débranche une fiche, cliquée dans la 3D.
  * Le PC doit d'abord être éteint : avant, la fiche ne bouge pas et on explique
- * pourquoi — sans compter d'erreur, c'est le bouton « Éteindre » qu'il fallait voir.
+ * pourquoi — sans compter d'erreur, c'est l'interrupteur qu'il fallait voir.
  */
 export function unplugPeripheral(periId: string) {
   const b = useBuild.getState()
@@ -95,7 +101,7 @@ export function unplugPeripheral(periId: string) {
       .getState()
       .info(
         "Éteins d'abord le PC",
-        `On ne débranche pas ${minuscule(nom)} d'une machine allumée. Clique sur « Éteindre le PC », en haut de l'écran.`,
+        `On ne débranche pas ${minuscule(nom)} d'une machine allumée. Bascule d'abord l'interrupteur de l'alimentation sur O : il est juste sous la prise secteur.`,
       )
     return
   }
@@ -128,7 +134,7 @@ export function removePart(id: ComponentId) {
   // --- Ordre imposé : éteindre puis débrancher AVANT de démonter ---
   if (dis.powered || !dis.periUnplugged) {
     const why = dis.powered
-      ? "Il faut d'abord ÉTEINDRE le PC, puis débrancher les câbles des périphériques."
+      ? "Il faut d'abord ÉTEINDRE le PC (interrupteur O / I, au dos de l'alimentation), puis débrancher les câbles des périphériques."
       : "Il faut d'abord DÉBRANCHER chaque périphérique : clique sur chaque fiche, à l'arrière de l'unité centrale."
     ex.bad(
       'Pas encore — on recommence',
@@ -164,6 +170,61 @@ export function removePart(id: ComponentId) {
   if (left.length === 0) useDis.setState({ finished: true })
 }
 
+/** Bascule l'interrupteur de l'alimentation sur O : la machine s'arrête. */
+export function switchOff() {
+  if (!useDis.getState().powered) return
+  sfx.click()
+  const { center } = psuSwitch()
+  useDis.setState((s) => ({
+    powered: false,
+    switchFlash: false,
+    floats: [...s.floats, { key: floatSeq++, pos: [center[0] + 5, center[1] + 4, center[2] + 4], text: 'Interrupteur sur O : PC éteint' }],
+  }))
+  useBuild.getState().set({ running: false, powered: false })
+}
+
+/**
+ * L'interrupteur O / I, au dos du bloc d'alimentation : c'est LUI qu'on clique pour
+ * éteindre, comme sur la vraie machine — pas un bouton à l'écran. Il pulse tant que
+ * le PC est allumé ; la zone cliquable déborde un peu la bascule (2 cm, trop petite
+ * à viser), et elle passe devant le bloc pour qu'un clic à côté ne le « démonte » pas.
+ */
+function PowerSwitch({ flash }: { flash: boolean }) {
+  const mat = useRef<THREE.MeshBasicMaterial>(null)
+  const [over, setOver] = useState(false)
+  const { center, size } = psuSwitch()
+
+  useFrame(() => {
+    if (!mat.current) return
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.005)
+    mat.current.opacity = over ? 0.7 : flash ? 0.35 + 0.45 * pulse : 0.25 + 0.25 * pulse
+  })
+
+  return (
+    <mesh
+      position={[center[0], center[1], center[2] + 0.4]}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation()
+        document.body.style.cursor = ''
+        switchOff()
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        setOver(true)
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={() => {
+        setOver(false)
+        document.body.style.cursor = ''
+      }}
+    >
+      <boxGeometry args={[size[0] + 0.9, size[1] + 0.8, size[2] + 0.8]} />
+      <meshBasicMaterial ref={mat} color={flash ? '#ffd166' : '#38bdf8'} transparent opacity={0.3} depthWrite={false} />
+    </mesh>
+  )
+}
+
 /* ---------------- Étiquette « … retiré » qui monte ---------------- */
 
 function RemovedFloat({ float, onDone }: { float: Float; onDone: () => void }) {
@@ -186,6 +247,7 @@ export function DisassemblyScene() {
   const floats = useDis((s) => s.floats)
   const powered = useDis((s) => s.powered)
   const plugFlash = useDis((s) => s.plugFlash)
+  const switchFlash = useDis((s) => s.switchFlash)
 
   return (
     <>
@@ -195,8 +257,10 @@ export function DisassemblyScene() {
         highlights={flash}
         onPartClick={removePart}
       />
-      {/* Allumé, les fiches répondent aussi au clic : on explique qu'il faut éteindre. */}
-      {phase === 'play' && <ConnectedPeripherals onUnplug={unplugPeripheral} flash={powered ? null : plugFlash} />}
+      {phase === 'play' && powered && <PowerSwitch flash={switchFlash} />}
+      {/* Allumé, seul l'interrupteur pulse ; les fiches répondent quand même au clic,
+          pour expliquer qu'il faut d'abord éteindre. */}
+      {phase === 'play' && <ConnectedPeripherals onUnplug={unplugPeripheral} flash={powered ? null : plugFlash} quiet={powered} />}
       {floats.map((f) => (
         <RemovedFloat
           key={f.key}
@@ -221,7 +285,7 @@ export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }
   const ready = useReady()
 
   useEffect(() => {
-    useDis.setState({ flash: {}, finished: false, powered: true, periUnplugged: false, plugFlash: null, floats: [] })
+    useDis.setState({ flash: {}, finished: false, powered: true, switchFlash: false, periUnplugged: false, plugFlash: null, floats: [] })
     useExercise.getState().begin('demontage', INSTALLABLE_IDS.length)
     useBuild.getState().resetBuild(ALL_INSTALLED)
     useBuild.getState().set({
@@ -242,13 +306,12 @@ export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }
     if (ready && finished && !result) setResult(useExercise.getState().finish())
   }, [ready, finished, result])
 
-  /* Les fiches sont à l'arrière : on y tourne la caméra le temps de les débrancher,
-     puis on revient dans la machine pour la suite. */
+  /* L'interrupteur et les fiches sont au dos de la tour : on y reste le temps de
+     l'éteindre et de la débrancher, puis on revient dans la machine pour la suite. */
   useEffect(() => {
     if (ex.phase !== 'play') return
-    if (!powered && !periUnplugged) onView?.('debranchement')
-    else if (periUnplugged) onView?.('inside')
-  }, [ex.phase, powered, periUnplugged, onView])
+    onView?.(periUnplugged ? 'inside' : 'debranchement')
+  }, [ex.phase, periUnplugged, onView])
 
   const removable = installed.filter((id) => id !== 'case' && blockers(id, installed).length === 0)
   const step3 = !powered && periUnplugged
@@ -258,7 +321,12 @@ export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }
       useExercise.getState().hint()
       useExercise
         .getState()
-        .info('Commence par éteindre', 'Clique sur le bouton « Éteindre le PC », en haut de l\'écran.')
+        .info(
+          'Commence par éteindre',
+          "Clique sur l'interrupteur O / I qui clignote en jaune : il est au dos du bloc d'alimentation, en bas de la tour, juste sous la prise secteur. On le bascule sur O.",
+        )
+      useDis.setState({ switchFlash: true })
+      setTimeout(() => useDis.setState({ switchFlash: false }), 2600)
       return
     }
     if (!periUnplugged) {
@@ -288,10 +356,10 @@ export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }
   return (
     <>
       <ExerciseBar onHint={hint} />
-      <ExerciseIntro onStart={() => onView?.('inside')}>
+      <ExerciseIntro onStart={() => onView?.('debranchement')}>
         <div className="intro-tips">
           <div>
-            <b>1️⃣ Éteindre</b> le PC (bouton en haut) — les ventilateurs s'arrêtent
+            <b>1️⃣ Éteindre</b> le PC : interrupteur O / I, au dos de l'alimentation — les ventilateurs s'arrêtent
           </div>
           <div>
             <b>2️⃣ Débrancher</b> chaque périphérique : clique sur chaque fiche, à l'arrière
@@ -305,19 +373,10 @@ export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }
       {ex.phase === 'play' && (
         <>
           <div className="disasmbar card">
-            <button
-              type="button"
-              className={`disasm-btn ${!powered ? 'pressed' : ''}`}
-              disabled={!powered}
-              title="Éteindre le PC avant toute manipulation"
-              onClick={() => {
-                sfx.click()
-                useDis.setState({ powered: false })
-                useBuild.getState().set({ running: false, powered: false })
-              }}
-            >
-              ⏻ {powered ? 'Éteindre le PC' : 'PC éteint'}
-            </button>
+            {/* Des états, pas des boutons : on éteint et on débranche DANS la 3D. */}
+            <span className={`disasm-btn disasm-status ${!powered ? 'pressed' : ''}`}>
+              ⏻ {powered ? 'PC allumé' : 'PC éteint'}
+            </span>
             <span className="disasmbar-arrow">→</span>
             <span className={`disasm-btn disasm-status ${periUnplugged ? 'pressed' : powered ? 'waiting' : ''}`}>
               🔌{' '}
@@ -371,7 +430,8 @@ export function DisassemblyUi({ onView }: { onView?: (v: CameraViewId) => void }
               </>
             ) : powered ? (
               <>
-                <span>⏻</span> Commence par éteindre le PC : bouton « Éteindre le PC », en haut
+                <span>⏻</span> Commence par éteindre le PC : clique sur l'interrupteur O / I, au dos
+                de l'alimentation (en bas de la tour)
               </>
             ) : (
               <>
